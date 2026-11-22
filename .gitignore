@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Backend data generated at runtime
+# vector store, rebuilt from backend/corpus on first search
+backend/chroma/
+# audit logs; may contain user briefs
+backend/runs/
+
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+.claude/
+claude/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+*.log
