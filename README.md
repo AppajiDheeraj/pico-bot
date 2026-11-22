@@ -15,9 +15,9 @@
 
 <br>
 
-<img alt="Pico home screen with four finance case studies to start from and the agent panel on the right" src="docs/home.png" width="100%">
-
 </div>
+
+https://github.com/user-attachments/assets/b17b7be7-eb1d-4154-a3f1-0f149cc814b0
 
 ## What it does
 
