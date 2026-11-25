@@ -61,27 +61,11 @@ export function createMockSession(speed = 1): AgentSession {
     await sleep(1100);
     await say("pico", `On it. Reading your brief now — I'll have the **Analyst** pull out the requirements first.`, 900);
 
-    emit({ type: "working", agents: ["analyst"] });
-    const gaps = s.questions.map((q) => q.text.replace(/\?$/, "").replace(/^(How|Who|Which|What|Should|Can|Is|Are|Where) /, (m) => m.toLowerCase())).slice(0, 4);
-    await delegate([
-      { from: "pico", to: "analyst", text: `Brief attached: “${s.label}”. Extract candidate requirements and flag anything that blocks a testable acceptance criterion.` },
-      { from: "analyst", to: "pico", text: `Found ${s.base.requirements.length} candidate requirements across ${new Set(s.base.requirements.map((r) => r.category)).size} categories.` },
-      { from: "analyst", to: "pico", text: `${gaps.length} gaps: ${gaps.join("; ")}.` },
-      { from: "pico", to: "analyst", text: "I'll ask the user, one question at a time." },
-    ]);
-    emit({ type: "working", agents: [] });
-
-    emit({ type: "stage", stage: "clarify" });
-    await say("pico", `A few things in the brief are unclear. I'll ask one at a time — pick an option, write your own, or skip if you don't know yet.`);
-    const qid = uid("q");
-    push({ kind: "questions", id: qid, title: s.label, questions: s.questions, at: Date.now() });
-    const answers = await wait<Answer[]>(qid);
-    emit({ type: "patch", id: qid, patch: { answers } as Partial<Item> });
-
-    const skipped = answers.filter((a) => a.value == null).length;
+    // No clarifying questions: the scripted demo assumes each question's recommended option.
+    const answers: Answer[] = s.questions.map((q) => ({ questionId: q.id, value: q.options.find((o) => o.recommended)?.label ?? q.options[0]?.label ?? null }));
     emit({ type: "working", agents: ["analyst"] });
     await delegate([
-      { from: "pico", to: "analyst", text: `Answers are in${skipped ? ` (${skipped} skipped — log those as open issues)` : ""}. Draft the SRS.` },
+      { from: "pico", to: "analyst", text: `Brief attached: “${s.label}”. Draft the SRS.` },
       { from: "analyst", to: "pico", text: "Draft ready. Every requirement has an acceptance criterion and a test case." },
     ]);
     emit({ type: "working", agents: [] });
@@ -98,15 +82,7 @@ export function createMockSession(speed = 1): AgentSession {
         kind: "approval",
         id: aid,
         from: "pico",
-        title: "Pico wants to hand off the SRS",
-        subtitle: "Send it to the SDLC Planner for a lifecycle recommendation.",
-        breakdown: [
-          ["Requirements", String(built.srs.requirements.length)],
-          ["Quality findings", String(built.srs.findings.length)],
-          ["Open issues", String(built.srs.openIssues.length)],
-          ["Traced to tests", `${built.srs.traceability.length} / ${built.srs.requirements.length}`],
-        ],
-        footnote: "The planner only reads the SRS. Nothing leaves this workspace.",
+        title: "Send it to the SDLC Planner for a lifecycle recommendation.",
         status: "pending",
         at: Date.now(),
       });

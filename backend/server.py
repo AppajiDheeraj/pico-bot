@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 import rules
-from agents import OVERVIEW, PLAN, QUESTIONS, RATE, REQUIREMENTS, analyst, ask, planner
+from agents import OVERVIEW, PLAN, RATE, REQUIREMENTS, analyst, ask, planner
 
 app = FastAPI(title="Pico")
 LOGS = Path(__file__).parent / "runs"
@@ -93,42 +93,24 @@ async def plan_sdlc(srs: dict, trace: list) -> dict:
 
 
 async def run(s: Session, brief: str):
-    """Intake → clarify (pause) → SRS → approval (pause) → SDLC → human review."""
+    """Intake → SRS → approval (pause) → SDLC → human review."""
     brief = rules.mask(brief)
     await s.emit("stage", stage="intake")
     await s.push("event", icon="wake", text="Pico is waking up")
     await s.say("On it. I'll have the **Analyst** read your brief against the regulations library first.")
 
-    # Agent (i), step 1: find gaps and ask about them.
-    await s.emit("working", agents=["analyst"])
-    hits = s.search(brief, k=3)
-    asked = await ask(analyst, QUESTIONS, f"Brief:\n{brief}\n\n{evidence_block(hits)}", s.trace)
-    for i, q in enumerate(asked["questions"], 1):
-        q["id"] = f"q{i}"  # the model's ids can be blank or repeated
-        q["text"], q["why"] = rules.plain(q["text"]), rules.plain(q["why"])
-    await s.delegate(("pico", "analyst", "Brief attached. Find what blocks testable requirements."),
-                     ("analyst", "pico", f"Read {len(hits)} passages ({', '.join(sorted({h.split('/')[1].split('.')[0] for h in hits}))}). {len(asked['questions'])} gaps to ask about."))
-
-    await s.emit("stage", stage="clarify")
-    await s.say("A few things in the brief are unclear. I'll ask one at a time — pick an option, write your own, or skip.")
-    qid = await s.push("questions", title="Clarifications", questions=asked["questions"])
-    answers = await s.wait_for(qid)
-    await s.emit("patch", id=qid, patch={"answers": answers})
-    text_of = {q["id"]: q["text"] for q in asked["questions"]}
-    qa = "\n".join(f"Q: {text_of.get(a['questionId'], a['questionId'])}\nA: {rules.mask(a['value']) if a['value'] else 'SKIPPED — record as open issue'}" for a in answers)
-
-    # Agent (i), step 2: write the SRS; rules.validate checks it. Loops while the user asks for revisions.
+    # Agent (i): write the SRS; rules.validate checks it. Loops while the user asks for revisions.
     notes, version = [], 1
     while True:
         await s.emit("working", agents=["analyst"])
-        hits = s.search(brief + " " + qa + " " + " ".join(notes), k=5)
-        context = f"Brief:\n{brief}\n\nAnswers:\n{qa}\n\nRevisions requested:\n{notes or 'none'}\n\n{evidence_block(hits)}"
+        hits = s.search(brief + " " + " ".join(notes), k=5)
+        context = f"Brief:\n{brief}\n\nRevisions requested:\n{notes or 'none'}\n\n{evidence_block(hits)}"
         reqs, overview = await asyncio.gather(ask(analyst, REQUIREMENTS, context, s.trace), ask(analyst, OVERVIEW, context, s.trace))
         labels = dict(zip((f"E{i}" for i in range(1, len(hits) + 1)), hits))
         for r in reqs["requirements"]:
             r["source"] = labels.get(r["source"], r["source"])
         srs = rules.validate(overview | reqs, set(hits))
-        await s.delegate(("pico", "analyst", f"Answers attached. Write SRS v{version}."),
+        await s.delegate(("pico", "analyst", f"Brief attached. Write SRS v{version}."),
                          ("analyst", "pico", f"{len(srs['requirements'])} requirements from {len(hits)} passages; {len(srs['findings'])} quality findings."))
         await s.emit("stage", stage="srs")
         await s.push("event", icon="doc", text="Updated document" if version > 1 else "Created document", strong=f"SRS v{version} · {srs['title']}")
@@ -137,11 +119,7 @@ async def run(s: Session, brief: str):
 
         planning = asyncio.create_task(plan_sdlc(srs, s.trace))  # start the planner while the user reads the SRS
         await s.emit("stage", stage="handoff")
-        aid = await s.push("approval", **{"from": "pico"}, title="Pico wants to hand off the SRS", status="pending",
-                           subtitle="Send it to the SDLC Planner for a lifecycle recommendation.",
-                           breakdown=[["Requirements", str(len(srs["requirements"]))], ["Quality findings", str(len(srs["findings"]))],
-                                      ["Open issues", str(len(srs["openIssues"]))], ["Traced to tests", f"{len(srs['traceability'])} / {len(srs['requirements'])}"]],
-                           footnote="The planner only reads the SRS. Nothing leaves this machine.")
+        aid = await s.push("approval", **{"from": "pico"}, title="Send it to the SDLC Planner for a lifecycle recommendation.", status="pending")
         decision = await s.wait_for(aid)
         await s.emit("patch", id=aid, patch={"status": decision})
         if decision == "allowed":

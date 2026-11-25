@@ -6,7 +6,6 @@ import type { Item, Requirement, Sdlc, Srs } from "../lib/types";
 type Approval = Extract<Item, { kind: "approval" }>;
 
 export function ApprovalCard({ item, onDecide }: { item: Approval; onDecide: (d: "allowed" | "revise") => void }) {
-  const [open, setOpen] = useState(true);
   const pending = item.status === "pending";
   return (
     <div className="stacked" data-active={pending || undefined}>
@@ -33,21 +32,6 @@ export function ApprovalCard({ item, onDecide }: { item: Approval; onDecide: (d:
             </span>
           )}
         </div>
-        <div className="approval-sub">{item.subtitle}</div>
-        <button className="disclosure" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          <ChevronDown size={14} className="disclosure-chev" /> {open ? "Hide the breakdown" : "Show the breakdown"}
-        </button>
-        {open && (
-          <div className="breakdown">
-            {item.breakdown.map(([k, v], i) => (
-              <div key={k} className="breakdown-row" data-total={i === item.breakdown.length - 1 || undefined}>
-                <span>{k}</span>
-                <span>{v}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="approval-foot">{item.footnote}</div>
         {pending && (
           <div className="approval-actions">
             <button className="btn light" onClick={() => onDecide("allowed")}>

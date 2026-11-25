@@ -66,9 +66,6 @@ export type Item =
       id: string;
       from: AgentId;
       title: string;
-      subtitle: string;
-      breakdown: [string, string][];
-      footnote: string;
       status: "pending" | "allowed" | "revise";
       at: number;
     }

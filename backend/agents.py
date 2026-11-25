@@ -1,6 +1,6 @@
 """The two ADK agents.
 
-Analyst (i) runs 3 steps: QUESTIONS, then REQUIREMENTS and OVERVIEW together. Planner (ii) runs 2: RATE, then PLAN.
+Analyst (i) runs REQUIREMENTS and OVERVIEW together. Planner (ii) runs 2: RATE, then PLAN.
 Every step must answer in a fixed JSON shape (Pydantic), which LM Studio enforces while generating.
 """
 import os
@@ -29,21 +29,6 @@ Level = Literal["Low", "Medium", "High"]
 
 
 # ---------- Output shapes (same field names as frontend/src/lib/types.ts) ----------
-
-class Option(BaseModel):
-    label: str = Field(max_length=70)
-    recommended: bool = False
-
-
-class Question(BaseModel):
-    text: str = Field(max_length=140, description="One short question, under 20 words; no numbering, no options here")
-    why: str = Field(max_length=140, description="Which gap in the brief this closes; do not mention evidence labels")
-    options: list[Option] = Field(min_length=3, max_length=4, description="Each at most 8 words")
-
-
-class Questions(BaseModel):
-    questions: list[Question] = Field(min_length=3, max_length=4)
-
 
 class Requirement(BaseModel):
     statement: str = Field(max_length=200, description='One "The system shall ..." sentence')
@@ -113,22 +98,17 @@ GROUND = (
 
 # Agent (i): identifies and lists the software requirements.
 analyst = LlmAgent(name="analyst", model=MODEL, instruction=(
-    "You are a finance-sector requirements analyst. You either ask the clarifying questions a brief needs, "
-    "or write its software requirements specification, as the task says." + GROUND))
+    "You are a finance-sector requirements analyst. You write the software requirements specification for a brief." + GROUND))
 
 # Agent (ii): identifies a suitable SDLC for that specification.
 planner = LlmAgent(name="planner", model=MODEL, instruction=(
     "You are a software process expert who picks and plans the SDLC for a finance project from its SRS." + GROUND))
 
 # What each agent is asked to do, step by step, and the JSON shape it must answer in.
-QUESTIONS = ("Find what the brief leaves unclear that blocks testable requirements. Ask the project owner 3 or 4 short "
-             "questions about THEIR project (users, business rules, limits, integrations, volumes, who approves releases, "
-             "data retention), each about one thing, each with 3-4 short answer options; mark the likeliest recommended. "
-             "Never quiz them about what regulations say.", Questions)
-REQUIREMENTS = ("List the software requirements from the brief, the user's answers and the evidence: 8-10 requirements "
+REQUIREMENTS = ("List the software requirements from the brief and the evidence: 8-10 requirements "
                 "covering functional and non-functional needs (security, privacy, regulatory, audit, performance). Every "
                 "acceptance criterion must be measurable. Do not put IDs in statements.", Requirements)
-OVERVIEW = ("Write the SRS overview for the brief and the user's answers: title, summary, assumptions, stakeholders, "
+OVERVIEW = ("Write the SRS overview for the brief: title, summary, assumptions, stakeholders, "
             "and honestly the main quality findings (ambiguous or missing information), risks and open issues.", Overview)
 RATE = ("Rate every listed decision factor Low, Medium or High for this SRS (High = the project has more of it, e.g. High "
         "requirement stability = requirements will rarely change), citing the requirement IDs behind each rating.", Factors)
