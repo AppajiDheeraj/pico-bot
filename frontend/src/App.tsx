@@ -145,7 +145,7 @@ export default function App() {
               onDecide={(id, d) => agents.current.get(active.id)?.decide(id, d)}
             />
           ) : (
-            <StartScreen />
+            <StartScreen onStart={start} />
           )}
         </div>
         <Composer placeholder={active ? "Message Pico" : "Describe the system you want specified…"} onSend={send} />
