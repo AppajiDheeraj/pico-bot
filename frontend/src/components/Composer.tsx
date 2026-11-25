@@ -1,4 +1,4 @@
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
 export function Composer({ placeholder, onSend, disabled }: { placeholder: string; onSend: (text: string) => void; disabled?: boolean }) {
@@ -19,9 +19,6 @@ export function Composer({ placeholder, onSend, disabled }: { placeholder: strin
   return (
     <div className="composer-dock">
       <div className="composer">
-        <button className="composer-button" type="button" aria-label="Attach a document (coming with the backend)" title="Attach a document — coming with the backend" disabled>
-          <Paperclip size={16} />
-        </button>
         <textarea
           ref={ref}
           rows={1}
@@ -40,7 +37,6 @@ export function Composer({ placeholder, onSend, disabled }: { placeholder: strin
           <ArrowUp size={17} strokeWidth={2.4} />
         </button>
       </div>
-      <div className="composer-hint">Pico drafts requirements and lifecycle advice. A person must review anything regulatory.</div>
     </div>
   );
 }

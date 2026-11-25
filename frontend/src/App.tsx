@@ -118,7 +118,7 @@ export default function App() {
           </button>
           <AgentAvatar id="pico" size={24} working={!!active && active.working.length > 0} />
           <span className="chat-title">{active ? active.title : "Pico"}</span>
-          <span className="tag">{active ? STAGE_LABEL[active.stage] : "Requirements → SDLC"}</span>
+          {active && <span className="tag">{STAGE_LABEL[active.stage]}</span>}
           <span className="spacer" />
           {steps.length > 0 && (
             <button className="icon-btn round" aria-label="Show run trace" title="Run trace" onClick={() => setTraceOpen(true)}>
@@ -145,7 +145,7 @@ export default function App() {
               onDecide={(id, d) => agents.current.get(active.id)?.decide(id, d)}
             />
           ) : (
-            <StartScreen onStart={start} />
+            <StartScreen />
           )}
         </div>
         <Composer placeholder={active ? "Message Pico" : "Describe the system you want specified…"} onSend={send} />
