@@ -18,7 +18,7 @@ export function StartScreen({ onStart }: { onStart: (brief: string, label: strin
         </div>
         <h1>Hi, I'm Pico.</h1>
         <p>
-          Give me a system to build. I'll pull out the requirements, ask about anything unclear, write the SRS, then hand it to my planner for an SDLC
+          Give me a system to build. I'll pull out the requirements, write the SRS, then hand it to my planner for an SDLC
           recommendation.
         </p>
         <div className="start-crew">

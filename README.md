@@ -23,7 +23,7 @@
 
 Pico is a course project for software engineering. You chat with one assistant, Pico, and two AI agents do the work behind it:
 
-1. The **Analyst** reads your brief, asks about anything unclear and writes a software requirements specification (SRS).
+1. The **Analyst** reads your brief and writes a software requirements specification (SRS).
 2. The **SDLC Planner** reads that SRS and recommends a development lifecycle, with a step-by-step workflow.
 
 Everything runs on your own computer. The model runs in LM Studio, and Pico hides PAN, Aadhaar, card numbers, emails and phone numbers before any text reaches it.

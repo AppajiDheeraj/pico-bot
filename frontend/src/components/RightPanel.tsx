@@ -6,7 +6,6 @@ import { AgentAvatar } from "./Avatar";
 
 const STEPS: { id: Stage; label: string }[] = [
   { id: "intake", label: "Read the brief" },
-  { id: "clarify", label: "Clarify with you" },
   { id: "srs", label: "Write the SRS" },
   { id: "handoff", label: "Your approval" },
   { id: "sdlc", label: "Recommend an SDLC" },
