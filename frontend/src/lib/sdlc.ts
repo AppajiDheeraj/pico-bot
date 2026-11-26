@@ -17,7 +17,7 @@ const LABEL: Record<keyof Traits, string> = {
   failure: "Failure consequence",
 };
 
-// Same rule as backend/rules.py: score = base + Σ weight × level, capped to 5–97.
+// Same rule and the same seven models as backend/rules.py: score = base + Σ weight × level, capped to 5–97.
 type Model = { model: string; base: number; weights: Partial<Record<keyof Traits, number>>; fit: string; miss: string };
 
 const MODELS: Model[] = [
@@ -30,18 +30,15 @@ const MODELS: Model[] = [
   { model: "Spiral", base: 57, weights: { failure: 7, complexity: 7, stability: -6, regulatory: 2, delivery: -3 },
     fit: "risk-driven loops handle uncertainty and high failure cost",
     miss: "heavy risk analysis each loop is costly when requirements are already clear" },
-  { model: "Agile (Scrum)", base: 60, weights: { change: 10, delivery: 8, formality: -5, regulatory: -6, stability: -3 },
+  { model: "Prototyping", base: 52, weights: { stability: -8, change: 4, formality: -5, regulatory: -4, failure: -3 },
+    fit: "unclear requirements are settled by showing users working mock-ups early",
+    miss: "prototypes are thrown away and skip the formal documentation audits need" },
+  { model: "Iterative", base: 48, weights: { change: 5, complexity: 5, delivery: 3, regulatory: 2, stability: -2 },
+    fit: "a large system is built and refined over repeated full cycles",
+    miss: "early cycles deliver partial designs that a strict audit cannot sign off" },
+  { model: "Agile", base: 60, weights: { change: 10, delivery: 8, formality: -5, regulatory: -6, stability: -3 },
     fit: "short sprints absorb changing requirements and get feedback early",
     miss: "light documentation clashes with formal audit and sign-off needs" },
-  { model: "DevSecOps", base: 40, weights: { delivery: 10, security: 7, change: 5, formality: -3 },
-    fit: "automated pipelines with security checks support frequent, safe releases",
-    miss: "its value is continuous delivery, which this project does not need" },
-  { model: "Incremental", base: 48, weights: { complexity: 5, change: 4, regulatory: 3, stability: 2 },
-    fit: "delivers the system in usable slices, each fully specified",
-    miss: "needs a stable overall architecture up front" },
-  { model: "Agile–V-Model hybrid", base: 46, weights: { regulatory: 6, change: 6, formality: 3, delivery: 2, stability: -2 },
-    fit: "combines short iterations with V-Model verification gates for high regulation with evolving requirements",
-    miss: "two processes to run; only pays off when requirements keep changing" },
   { model: "RAD", base: 52, weights: { change: 6, complexity: -6, failure: -6, regulatory: -6 },
     fit: "fast prototyping for small, low-risk systems",
     miss: "too little rigour for high-risk or regulated systems" },

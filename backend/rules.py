@@ -126,24 +126,24 @@ FACTORS = [
 ]
 LEVEL = {"Low": 0, "Medium": 1, "High": 2}
 
-# Base score + weight per factor (applied to Low=0 / Medium=1 / High=2). Built from corpus/product/sdlc-selection-criteria.txt:
-# stable + approvals → Waterfall; strict V&V → V-Model; uncertainty/risk → Spiral; changing → Agile;
-# continuous secure deployment → DevSecOps; rapid → RAD; regulated + evolving → Agile–V-Model hybrid.
+# Only these seven models are scored. Base score + weight per factor (applied to Low=0 / Medium=1 / High=2).
+# Built from corpus/product/sdlc-selection-criteria.txt: stable + approvals → Waterfall; strict V&V → V-Model;
+# uncertainty/risk → Spiral; unclear needs that users must see → Prototyping; large system refined in cycles → Iterative;
+# changing → Agile; fast delivery of a small, low-risk system → RAD.
 MODELS = {
     "Waterfall": (50, {"Requirement stability": 10, "Testing and documentation formality": 5, "Regulatory criticality": 3,
                        "Expected change frequency": -10, "Need for continuous delivery": -6, "Project complexity": -3, "System size": -2}),
     "V-Model": (50, {"Need for formal verification": 8, "Testing and documentation formality": 6, "Regulatory criticality": 6,
                      "Failure consequence": 5, "Requirement stability": 5, "Expected change frequency": -8, "Need for continuous delivery": -5}),
     "Spiral": (57, {"Failure consequence": 6, "Project complexity": 7, "System size": 3, "Requirement stability": -6}),
+    "Prototyping": (52, {"Requirement stability": -8, "Stakeholder availability": 8, "Expected change frequency": 4,
+                         "Testing and documentation formality": -5, "Regulatory criticality": -4, "Failure consequence": -3, "System size": -2}),
+    "Iterative": (48, {"Expected change frequency": 5, "Project complexity": 5, "System size": 4, "Need for continuous delivery": 3,
+                       "Stakeholder availability": 2, "Regulatory criticality": 2, "Requirement stability": -2}),
     "Agile": (50, {"Expected change frequency": 10, "Need for continuous delivery": 6, "Stakeholder availability": 5,
                    "Testing and documentation formality": -6, "Regulatory criticality": -5, "Requirement stability": -3}),
-    "DevSecOps": (40, {"Need for continuous delivery": 10, "Security risk": 7, "Expected change frequency": 4,
-                       "Testing and documentation formality": -2}),
     "RAD": (52, {"Expected change frequency": 5, "Budget and schedule pressure": 4, "Project complexity": -6,
                  "Failure consequence": -6, "Regulatory criticality": -6}),
-    "Agile–V-Model hybrid": (46, {"Regulatory criticality": 6, "Expected change frequency": 6, "Need for formal verification": 5,
-                                  "Security risk": 3, "Testing and documentation formality": 3, "Need for continuous delivery": 2,
-                                  "Requirement stability": -2}),
 }
 
 
@@ -152,10 +152,10 @@ WHY = {
     "Waterfall": ("stable requirements and extensive approvals", "testing comes late, so verification evidence arrives after design is locked"),
     "V-Model": ("strict verification and validation: every build phase has a matching test phase", "rigid once a phase closes; late changes are expensive"),
     "Spiral": ("risk-driven loops for high uncertainty or technical risk", "heavy risk analysis each loop is costly when requirements are clear"),
+    "Prototyping": ("unclear requirements are settled by showing users working mock-ups early", "prototypes are thrown away and skip the formal documentation audits need"),
+    "Iterative": ("a large system is built and refined over repeated full cycles", "early cycles deliver partial designs that a strict audit cannot sign off"),
     "Agile": ("short iterations absorb frequently changing requirements", "light documentation clashes with formal audit and sign-off"),
-    "DevSecOps": ("continuous secure deployment with automated security checks", "its value is continuous delivery, which this project needs little of"),
     "RAD": ("rapid prototyping for small, low-risk systems", "too little rigour for high-risk or regulated systems"),
-    "Agile–V-Model hybrid": ("high regulation with evolving requirements: iterations plus V-Model verification gates", "two processes to run; only pays off when requirements keep changing"),
 }
 
 
@@ -190,7 +190,12 @@ if __name__ == "__main__":  # self-check: python rules.py
             "Need for formal verification", "Testing and documentation formality", "Failure consequence"]} | {"Expected change frequency": "Low"}
     assert rank(bank)[0][0] == "V-Model"
     shop = dict.fromkeys(FACTORS, "Low") | {"Expected change frequency": "High", "Need for continuous delivery": "High", "Security risk": "High"}
-    assert rank(shop)[0][0] in ("Agile", "DevSecOps")
+    assert rank(shop)[0][0] in ("Agile", "Iterative")
+    assert set(MODELS) == set(WHY) == {"Waterfall", "V-Model", "Spiral", "Prototyping", "Iterative", "Agile", "RAD"}
+    unclear = dict.fromkeys(FACTORS, "Low") | {"Stakeholder availability": "High", "Expected change frequency": "Medium"}
+    assert rank(unclear)[0][0] == "Prototyping"
+    big = dict.fromkeys(FACTORS, "Medium") | {"Project complexity": "High", "System size": "High", "Failure consequence": "Low"}
+    assert rank(big)[0][0] in ("Iterative", "Spiral")
     assert clip("Short and done.") == "Short and done." and clip("Needs formal checks; audits (R7) are mandatory and costly to redo late in the") == "Needs formal checks; audits (R7) are mandatory and costly to redo late in…"
     top = explain(bank)[0]
     assert top["score"] == max(5, min(97, top["base"] + sum(d["points"] for d in top["drivers"])))

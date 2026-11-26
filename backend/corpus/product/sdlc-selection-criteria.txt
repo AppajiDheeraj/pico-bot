@@ -3,9 +3,11 @@ Project condition → suitable SDLC (course selection rules for finance requirem
 Stable requirements and extensive approvals → Waterfall.
 Strict verification and validation → V-Model.
 High uncertainty or technical risk → Spiral.
+Unclear requirements that users must see before they can confirm them → Prototyping.
+Large or complex system refined over repeated full cycles → Iterative.
 Frequently changing requirements → Agile.
-Continuous secure deployment → DevSecOps.
-High regulation with evolving requirements → Agile–V-Model or DevSecOps hybrid.
+Fast delivery of a small, low-risk system → RAD.
+Recommend exactly one of these seven models: Waterfall, V-Model, Spiral, Prototyping, Iterative, Agile, RAD.
 
 Decision factors to extract from a specification before choosing:
 requirement stability; regulatory criticality; security risk; project complexity; system size; legacy-system dependence; frequency of expected changes; need for continuous delivery; availability of stakeholders; testing and documentation requirements; budget and schedule constraints; need for formal verification; consequences of system failure.

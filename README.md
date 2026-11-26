@@ -129,7 +129,7 @@ Before each step, Pico searches 16 real documents for the passages that match yo
 
 ### How the lifecycle is chosen
 
-The SDLC Planner rates 13 factors as Low, Medium or High, such as regulatory pressure, security risk and how often the requirements will change. A fixed scoring table then scores Waterfall, V-Model, Spiral, Agile, DevSecOps, RAD and a hybrid of Agile and the V-Model. The model does not pick the winner, so the same ratings always give the same ranking. The planner only writes the explanation and the workflow.
+The SDLC Planner rates 13 factors as Low, Medium or High, such as regulatory pressure, security risk and how often the requirements will change. A fixed scoring table then scores the seven models Pico can recommend: Waterfall, V-Model, Spiral, Prototyping, Iterative, Agile and RAD. The model does not pick the winner, so the same ratings always give the same ranking. The planner only writes the explanation.
 
 ## Use-case diagram
 
