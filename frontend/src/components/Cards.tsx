@@ -1,51 +1,7 @@
-import { Check, ChevronDown, Download, FileText, GitBranch, Loader, RotateCcw, ShieldAlert, Trophy } from "lucide-react";
+import { ChevronDown, Download, FileText, GitBranch, ShieldAlert, Trophy } from "lucide-react";
 import { useState } from "react";
 import { download, sdlcMarkdown, srsMarkdown } from "../lib/export";
-import type { Item, Requirement, Sdlc, Srs } from "../lib/types";
-
-type Approval = Extract<Item, { kind: "approval" }>;
-
-export function ApprovalCard({ item, onDecide }: { item: Approval; onDecide: (d: "allowed" | "revise") => void }) {
-  const pending = item.status === "pending";
-  return (
-    <div className="stacked" data-active={pending || undefined}>
-      {pending && (
-        <>
-          <div className="qstack-ghost" style={{ ["--i" as string]: 1 }} aria-hidden />
-          <div className="qstack-ghost" style={{ ["--i" as string]: 2 }} aria-hidden />
-        </>
-      )}
-      <div className="card approval">
-        <div className="approval-head">
-          <div className="approval-title">{item.title}</div>
-          {pending ? (
-            <span className="status-pill warn">
-              <Loader size={13} className="spin" /> Approval needed
-            </span>
-          ) : item.status === "allowed" ? (
-            <span className="status-pill success">
-              <Check size={12} strokeWidth={3} /> Allowed
-            </span>
-          ) : (
-            <span className="status-pill neutral">
-              <RotateCcw size={12} /> Revision requested
-            </span>
-          )}
-        </div>
-        {pending && (
-          <div className="approval-actions">
-            <button className="btn light" onClick={() => onDecide("allowed")}>
-              Allow
-            </button>
-            <button className="btn secondary" onClick={() => onDecide("revise")}>
-              Revise
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+import type { Requirement, Sdlc, Srs } from "../lib/types";
 
 function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (t: T) => void }) {
   return (

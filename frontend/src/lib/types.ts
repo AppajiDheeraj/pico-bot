@@ -53,22 +53,13 @@ export type Step = { name: string; kind: "llm" | "tool"; start: number; end: num
 
 export type DelegationMessage = { from: AgentId; to: AgentId; text: string };
 
-export type Stage = "idle" | "intake" | "clarify" | "srs" | "handoff" | "sdlc" | "review" | "done";
+export type Stage = "idle" | "intake" | "srs" | "sdlc" | "review" | "done";
 
 export type Item =
   | { kind: "user"; id: string; text: string; at: number }
   | { kind: "bot"; id: string; from: AgentId; text: string; at: number }
   | { kind: "event"; id: string; icon: "wake" | "handoff" | "doc" | "check" | "tool"; text: string; strong?: string; at: number }
   | { kind: "delegation"; id: string; messages: DelegationMessage[]; steps?: Step[]; at: number }
-  | { kind: "questions"; id: string; title: string; questions: Question[]; answers?: Answer[]; at: number }
-  | {
-      kind: "approval";
-      id: string;
-      from: AgentId;
-      title: string;
-      status: "pending" | "allowed" | "revise";
-      at: number;
-    }
   | { kind: "srs"; id: string; srs: Srs; at: number }
   | { kind: "sdlc"; id: string; sdlc: Sdlc; at: number }
   | { kind: "notice"; id: string; title: string; text: string; at: number };
@@ -83,10 +74,6 @@ export type AgentEvent =
 export interface AgentSession {
   /** Begin a run from the user's brief. Events stream to `emit`. */
   start(brief: string, emit: (e: AgentEvent) => void): void;
-  /** User finished (or skipped) a question stack. */
-  answer(itemId: string, answers: Answer[]): void;
-  /** User allowed or asked to revise a hand-off. */
-  decide(itemId: string, decision: "allowed" | "revise", note?: string): void;
   /** A free-text message mid-run (follow-ups after the run is done). */
   say(text: string): void;
   cancel(): void;

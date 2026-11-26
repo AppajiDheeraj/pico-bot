@@ -13,14 +13,11 @@ export function pickScenario(brief: string): Scenario {
 export function createMockSession(speed = 1): AgentSession {
   let emit: (e: AgentEvent) => void = () => {};
   let cancelled = false;
-  const waiters = new Map<string, (v: unknown) => void>();
-  let pendingRevision: ((text: string) => void) | null = null;
   let done = false;
 
   const sleep = (ms: number) =>
     new Promise<void>((res, rej) => setTimeout(() => (cancelled ? rej(new Error("cancelled")) : res()), ms / speed));
   const push = (item: Item) => emit({ type: "push", item });
-  const wait = <T,>(id: string) => new Promise<T>((res) => waiters.set(id, res as (v: unknown) => void));
 
   async function say(from: AgentId, text: string, think = 700) {
     emit({ type: "typing", from });
@@ -40,15 +37,10 @@ export function createMockSession(speed = 1): AgentSession {
     }
   }
 
-  async function draftSrs(s: Scenario, answers: Answer[], extra: string[], version: number): Promise<{ srs: Srs; traits: Traits }> {
+  async function draftSrs(s: Scenario, answers: Answer[]): Promise<{ srs: Srs; traits: Traits }> {
     const built = buildSrs(s, answers);
-    extra.forEach((text) => {
-      const id = `R${built.srs.requirements.length + 1}`;
-      built.srs.requirements.push({ id, statement: text.replace(/^./, (c) => c.toUpperCase()).replace(/([^.])$/, "$1."), category: "User-requested", priority: "Medium", acceptance: "Acceptance criterion to be agreed with the product owner.", source: "chat:revision" });
-      built.srs.traceability.push({ req: id, test: `TC${String(built.srs.requirements.length).padStart(3, "0")}`, check: "Pending acceptance criterion" });
-    });
     emit({ type: "stage", stage: "srs" });
-    push({ kind: "event", id: uid("e"), icon: "doc", text: version > 1 ? "Updated document" : "Created document", strong: `SRS v${version} · ${s.base.title}`, at: Date.now() });
+    push({ kind: "event", id: uid("e"), icon: "doc", text: "Created document", strong: `SRS · ${s.base.title}`, at: Date.now() });
     await sleep(300);
     push({ kind: "srs", id: uid("srs"), srs: built.srs, at: Date.now() });
     return built;
@@ -70,38 +62,8 @@ export function createMockSession(speed = 1): AgentSession {
     ]);
     emit({ type: "working", agents: [] });
 
-    let extra: string[] = [];
-    let version = 1;
-    let built = await draftSrs(s, answers, extra, version);
-
-    for (;;) {
-      await say("pico", `Here's the SRS: **${built.srs.requirements.length} requirements**, each traced to a test. Shall I send it to the **SDLC Planner**?`);
-      emit({ type: "stage", stage: "handoff" });
-      const aid = uid("a");
-      push({
-        kind: "approval",
-        id: aid,
-        from: "pico",
-        title: "Send it to the SDLC Planner for a lifecycle recommendation.",
-        status: "pending",
-        at: Date.now(),
-      });
-      const decision = await wait<"allowed" | "revise">(aid);
-      emit({ type: "patch", id: aid, patch: { status: decision } as Partial<Item> });
-      if (decision === "allowed") break;
-      await say("pico", "Sure. Tell me what to add or change and I'll redo the draft.", 500);
-      const text = await new Promise<string>((res) => (pendingRevision = res));
-      pendingRevision = null;
-      extra = [...extra, text];
-      version += 1;
-      emit({ type: "working", agents: ["analyst"] });
-      await delegate([
-        { from: "pico", to: "analyst", text: `Revision: “${text}”. Add it and refresh the matrix.` },
-        { from: "analyst", to: "pico", text: "Done. Added as a user-requested requirement." },
-      ]);
-      emit({ type: "working", agents: [] });
-      built = await draftSrs(s, answers, extra, version);
-    }
+    const built = await draftSrs(s, answers);
+    await say("pico", `Here's the SRS: **${built.srs.requirements.length} requirements**, each traced to a test. Sending it to the **SDLC Planner** now.`);
 
     emit({ type: "stage", stage: "sdlc" });
     push({ kind: "event", id: uid("e"), icon: "handoff", text: "Handed off to", strong: "SDLC Planner", at: Date.now() });
@@ -109,7 +71,7 @@ export function createMockSession(speed = 1): AgentSession {
     const sdlc = planSdlc(built.srs, built.traits);
     await delegate(
       [
-        { from: "pico", to: "planner", text: `SRS v${version} attached (${built.srs.requirements.length} requirements). Recommend a lifecycle and a project-specific workflow.` },
+        { from: "pico", to: "planner", text: `SRS attached (${built.srs.requirements.length} requirements). Recommend a lifecycle and a project-specific workflow.` },
         { from: "planner", to: "pico", text: `Scored ${sdlc.ranking.length} lifecycle models against ${sdlc.factors.length} decision factors from the SRS.` },
         { from: "planner", to: "pico", text: `${sdlc.chosen} leads at ${sdlc.ranking[0].score}/100; ${sdlc.ranking[1].model} is next at ${sdlc.ranking[1].score}.` },
       ],
@@ -138,21 +100,8 @@ export function createMockSession(speed = 1): AgentSession {
       emit = e;
       run(brief).catch(() => {});
     },
-    answer(id, answers) {
-      waiters.get(id)?.(answers);
-      waiters.delete(id);
-    },
-    decide(id, decision) {
-      waiters.get(id)?.(decision);
-      waiters.delete(id);
-    },
-    say(text) {
-      if (pendingRevision) return pendingRevision(text);
-      const reply = done
-        ? "Follow-up edits will work once the backend is connected. For now, start a new chat to run another brief."
-        : waiters.size
-          ? "Answer the card above first — I'll pick this up right after."
-          : "Noted. I'll fold that in once I'm done with this step.";
+    say() {
+      const reply = done ? "This run is finished. Start a new chat for another brief." : "Got it. I'm still working on this brief.";
       say("pico", reply, 500).catch(() => {});
     },
     cancel() {

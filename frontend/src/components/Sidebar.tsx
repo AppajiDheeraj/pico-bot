@@ -6,7 +6,7 @@ import { AgentAvatar } from "./Avatar";
 
 export type SessionRow = { id: string; title: string; preview: string; at: number; stage: Stage; unread?: boolean };
 
-const STAGE_DOT: Partial<Record<Stage, string>> = { clarify: "warn", handoff: "warn", done: "success" };
+const STAGE_DOT: Partial<Record<Stage, string>> = { done: "success" };
 
 export function Sidebar({
   sessions,

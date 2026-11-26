@@ -2,29 +2,26 @@ import { ArrowRightLeft, ChevronDown, Clock, FileText, Moon, TriangleAlert, Wren
 import { useState } from "react";
 import { CREW } from "../data/crew";
 import { Inline } from "../lib/inline";
-import type { AgentId, Answer, Item } from "../lib/types";
+import type { AgentId, Item } from "../lib/types";
 import { AgentAvatar, FaceStack } from "./Avatar";
-import { ApprovalCard, SdlcCard, SrsCard } from "./Cards";
-import { QuestionStack } from "./QuestionStack";
+import { SdlcCard, SrsCard } from "./Cards";
 import { TraceChip } from "./Trace";
 
 type Props = {
   items: Item[];
   typing: AgentId | null;
-  onAnswer: (id: string, a: Answer[]) => void;
-  onDecide: (id: string, d: "allowed" | "revise") => void;
 };
 
 const fmtTime = (t: number) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-export function Transcript({ items, typing, onAnswer, onDecide }: Props) {
+export function Transcript({ items, typing }: Props) {
   return (
     <div className="transcript">
       {items.length > 0 && <div className="time-sep">Today {fmtTime(items[0].at)}</div>}
       {items.map((it, i) => {
         const next = items[i + 1];
         const lastOfRun = it.kind === "bot" && !(next?.kind === "bot" && next.from === it.from) && !(typing === it.from && !next);
-        return <Row key={it.id} item={it} showAvatar={lastOfRun} onAnswer={onAnswer} onDecide={onDecide} />;
+        return <Row key={it.id} item={it} showAvatar={lastOfRun} />;
       })}
       {typing && (
         <div className="row bot enter">
@@ -44,7 +41,7 @@ export function Transcript({ items, typing, onAnswer, onDecide }: Props) {
   );
 }
 
-function Row({ item, showAvatar, onAnswer, onDecide }: { item: Item; showAvatar: boolean } & Pick<Props, "onAnswer" | "onDecide">) {
+function Row({ item, showAvatar }: { item: Item; showAvatar: boolean }) {
   switch (item.kind) {
     case "user":
       return (
@@ -65,20 +62,6 @@ function Row({ item, showAvatar, onAnswer, onDecide }: { item: Item; showAvatar:
       return <EventRow item={item} />;
     case "delegation":
       return <Delegation item={item} />;
-    case "questions":
-      return (
-        <div className="row bot wide enter">
-          <span className="row-avatar" />
-          <QuestionStack questions={item.questions} answers={item.answers} onSubmit={(a) => onAnswer(item.id, a)} submitLabel="Submit answers" />
-        </div>
-      );
-    case "approval":
-      return (
-        <div className="row bot wide enter">
-          <span className="row-avatar" />
-          <ApprovalCard item={item} onDecide={(d) => onDecide(item.id, d)} />
-        </div>
-      );
     case "srs":
       return (
         <div className="row bot full enter">

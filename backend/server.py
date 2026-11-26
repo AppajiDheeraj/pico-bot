@@ -23,7 +23,6 @@ LOGS.mkdir(exist_ok=True)
 class Session:
     def __init__(self, sid: str):
         self.id, self.events, self.changed = sid, [], asyncio.Condition()
-        self.waiting: dict[str, asyncio.Future] = {}  # item id → the user's answer / decision / message
         self.trace, self.shown = [], 0  # spans (agent calls, retrievals); how many are already attached to a delegation row
 
     async def emit(self, type: str, **data):
@@ -37,8 +36,6 @@ class Session:
 
     async def push(self, kind: str, **item) -> str:
         item_id = f"{kind}-{uuid.uuid4().hex[:8]}"
-        if kind in ("questions", "approval"):  # register before the UI can see it, or a fast reply finds nobody waiting
-            self.waiting[item_id] = asyncio.get_running_loop().create_future()
         await self.emit("push", item={"kind": kind, "id": item_id, "at": int(time.time() * 1000), **item})
         return item_id
 
@@ -57,13 +54,6 @@ class Session:
 
     async def say(self, text: str):
         await self.push("bot", **{"from": "pico", "text": text})
-
-    async def wait_for(self, item_id: str):
-        future = self.waiting.setdefault(item_id, asyncio.get_running_loop().create_future())
-        try:
-            return await future
-        finally:
-            self.waiting.pop(item_id, None)
 
 
 SESSIONS: dict[str, Session] = {}
@@ -93,48 +83,34 @@ async def plan_sdlc(srs: dict, trace: list) -> dict:
 
 
 async def run(s: Session, brief: str):
-    """Intake → SRS → approval (pause) → SDLC → human review."""
+    """Intake → SRS → SDLC → human review."""
     brief = rules.mask(brief)
     await s.emit("stage", stage="intake")
     await s.push("event", icon="wake", text="Pico is waking up")
     await s.say("On it. I'll have the **Analyst** read your brief against the regulations library first.")
 
-    # Agent (i): write the SRS; rules.validate checks it. Loops while the user asks for revisions.
-    notes, version = [], 1
-    while True:
-        await s.emit("working", agents=["analyst"])
-        hits = s.search(brief + " " + " ".join(notes), k=5)
-        context = f"Brief:\n{brief}\n\nRevisions requested:\n{notes or 'none'}\n\n{evidence_block(hits)}"
-        reqs, overview = await asyncio.gather(ask(analyst, REQUIREMENTS, context, s.trace), ask(analyst, OVERVIEW, context, s.trace))
-        labels = dict(zip((f"E{i}" for i in range(1, len(hits) + 1)), hits))
-        for r in reqs["requirements"]:
-            r["source"] = labels.get(r["source"], r["source"])
-        srs = rules.validate(overview | reqs, set(hits))
-        await s.delegate(("pico", "analyst", f"Brief attached. Write SRS v{version}."),
-                         ("analyst", "pico", f"{len(srs['requirements'])} requirements from {len(hits)} passages; {len(srs['findings'])} quality findings."))
-        await s.emit("stage", stage="srs")
-        await s.push("event", icon="doc", text="Updated document" if version > 1 else "Created document", strong=f"SRS v{version} · {srs['title']}")
-        await s.push("srs", srs=srs)
-        await s.say(f"Here's the SRS: **{len(srs['requirements'])} requirements**, each traced to a test. Shall I send it to the **SDLC Planner**?")
-
-        planning = asyncio.create_task(plan_sdlc(srs, s.trace))  # start the planner while the user reads the SRS
-        await s.emit("stage", stage="handoff")
-        aid = await s.push("approval", **{"from": "pico"}, title="Send it to the SDLC Planner for a lifecycle recommendation.", status="pending")
-        decision = await s.wait_for(aid)
-        await s.emit("patch", id=aid, patch={"status": decision})
-        if decision == "allowed":
-            break
-        planning.cancel()
-        await s.say("Sure. Tell me what to add or change and I'll redo the draft.")
-        notes.append(rules.mask(await s.wait_for("revision")))
-        version += 1
+    # Agent (i): write the SRS; rules.validate checks it.
+    await s.emit("working", agents=["analyst"])
+    hits = s.search(brief, k=5)
+    context = f"Brief:\n{brief}\n\n{evidence_block(hits)}"
+    reqs, overview = await asyncio.gather(ask(analyst, REQUIREMENTS, context, s.trace), ask(analyst, OVERVIEW, context, s.trace))
+    labels = dict(zip((f"E{i}" for i in range(1, len(hits) + 1)), hits))
+    for r in reqs["requirements"]:
+        r["source"] = labels.get(r["source"], r["source"])
+    srs = rules.validate(overview | reqs, set(hits))
+    await s.delegate(("pico", "analyst", "Brief attached. Write the SRS."),
+                     ("analyst", "pico", f"{len(srs['requirements'])} requirements from {len(hits)} passages; {len(srs['findings'])} quality findings."))
+    await s.emit("stage", stage="srs")
+    await s.push("event", icon="doc", text="Created document", strong=f"SRS · {srs['title']}")
+    await s.push("srs", srs=srs)
+    await s.say(f"Here's the SRS: **{len(srs['requirements'])} requirements**, each traced to a test. Sending it to the **SDLC Planner** now.")
 
     await s.emit("stage", stage="sdlc")
     await s.push("event", icon="handoff", text="Handed off to", strong="SDLC Planner")
     await s.emit("working", agents=["planner"])
-    sdlc = await planning
+    sdlc = await plan_sdlc(srs, s.trace)
     chosen, ranking = sdlc["chosen"], sdlc["ranking"]
-    await s.delegate(("pico", "planner", f"SRS v{version} attached ({len(srs['requirements'])} requirements). Recommend a lifecycle."),
+    await s.delegate(("pico", "planner", f"SRS attached ({len(srs['requirements'])} requirements). Recommend a lifecycle."),
                      ("planner", "pico", f"Rated {len(sdlc['factors'])} decision factors; scored {len(ranking)} models."),
                      ("planner", "pico", f"{chosen} leads at {ranking[0]['score']}/100; {ranking[1]['model']} next at {ranking[1]['score']}."))
     await s.push("event", icon="doc", text="Created document", strong="SDLC recommendation")
@@ -163,16 +139,8 @@ class Brief(BaseModel):
     brief: str = Field(min_length=10, max_length=8000)
 
 
-class Answer(BaseModel):
-    questionId: str
-    value: str | None = Field(None, max_length=500)  # None = skipped
-
-
 class Reply(BaseModel):
-    itemId: str = ""
-    answers: list[Answer] | None = None
-    decision: str | None = None
-    text: str | None = Field(None, max_length=2000)
+    text: str = Field(min_length=1, max_length=2000)
 
 
 def session(sid: str) -> Session:
@@ -208,23 +176,9 @@ async def events(sid: str, request: Request):
 
 @app.post("/api/sessions/{sid}/reply")
 async def reply(sid: str, body: Reply):
-    """One endpoint for every human input: question answers, the approval decision, and chat messages."""
+    """A chat message mid-run. The pipeline needs no input, so Pico only acknowledges it."""
     s = session(sid)
-    if body.answers is not None:
-        value = [a.model_dump() for a in body.answers]
-    elif body.decision in ("allowed", "revise"):
-        value = body.decision
-    elif body.text:
-        if "revision" not in s.waiting:
-            await s.say("Got it. I'll pick that up when I'm done with this step." if s.waiting else "This run is finished. Start a new chat for another brief.")
-            return {"ok": True}
-        body.itemId, value = "revision", body.text
-    else:
-        raise HTTPException(422, "Send answers, decision or text")
-    future = s.waiting.get(body.itemId)
-    if not future or future.done():
-        raise HTTPException(409, "Not waiting for that")
-    future.set_result(value)
+    await s.say("This run is finished. Start a new chat for another brief." if s.task.done() else "Got it. I'm still working on this brief.")
     return {"ok": True}
 
 

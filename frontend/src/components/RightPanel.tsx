@@ -7,15 +7,14 @@ import { AgentAvatar } from "./Avatar";
 const STEPS: { id: Stage; label: string }[] = [
   { id: "intake", label: "Read the brief" },
   { id: "srs", label: "Write the SRS" },
-  { id: "handoff", label: "Your approval" },
   { id: "sdlc", label: "Recommend an SDLC" },
   { id: "review", label: "Human review" },
 ];
-const ORDER: Stage[] = ["idle", "intake", "clarify", "srs", "handoff", "sdlc", "review", "done"];
+const ORDER: Stage[] = ["idle", "intake", "srs", "sdlc", "review", "done"];
 
 export function RightPanel({ stage, working, srs, sdlc, onClose }: { stage: Stage; working: AgentId[]; srs?: Srs; sdlc?: Sdlc; onClose: () => void }) {
   const at = ORDER.indexOf(stage);
-  const picoBusy = stage !== "idle" && stage !== "done" && stage !== "clarify" && stage !== "handoff";
+  const picoBusy = stage !== "idle" && stage !== "done";
   return (
     <aside className="panel">
       <div className="panel-top">
@@ -28,8 +27,8 @@ export function RightPanel({ stage, working, srs, sdlc, onClose }: { stage: Stag
         <div className="panel-name">Pico</div>
         <span className="tag">Lead</span>
         <div className="presence">
-          <span className={`dot ${stage === "idle" ? "muted" : picoBusy ? "accent" : stage === "clarify" || stage === "handoff" ? "warn" : "success"}`} />
-          {stage === "idle" ? "Asleep" : picoBusy ? "Working" : stage === "clarify" || stage === "handoff" ? "Waiting for you" : "Online"}
+          <span className={`dot ${stage === "idle" ? "muted" : picoBusy ? "accent" : "success"}`} />
+          {stage === "idle" ? "Asleep" : picoBusy ? "Working" : "Online"}
         </div>
         <p className="panel-blurb">{CREW.pico.blurb}</p>
       </div>

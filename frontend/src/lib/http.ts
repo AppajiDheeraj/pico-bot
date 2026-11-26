@@ -26,8 +26,6 @@ export function createHttpSession(): AgentSession {
         })
         .catch(() => fail("the backend is not reachable"));
     },
-    answer: (itemId, answers) => void reply({ itemId, answers }),
-    decide: (itemId, decision) => void reply({ itemId, decision }),
     say: (text) => void reply({ text }),
     cancel: () => source?.close(),
   };

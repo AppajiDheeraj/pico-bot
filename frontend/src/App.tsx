@@ -20,9 +20,7 @@ type Session = { id: string; title: string; items: Item[]; typing: AgentId | nul
 const STAGE_LABEL: Record<Stage, string> = {
   idle: "Asleep",
   intake: "Reading the brief",
-  clarify: "Waiting for your answers",
   srs: "Writing the SRS",
-  handoff: "Waiting for approval",
   sdlc: "Planning the SDLC",
   review: "Wrapping up",
   done: "Done",
@@ -47,8 +45,6 @@ function preview(s: Session): string {
   for (let i = s.items.length - 1; i >= 0; i--) {
     const it = s.items[i];
     if (it.kind === "bot" || it.kind === "user") return it.text.replace(/\*\*/g, "");
-    if (it.kind === "questions" && !it.answers) return "Waiting for your answers";
-    if (it.kind === "approval" && it.status === "pending") return "Approval needed";
   }
   return "";
 }
@@ -141,8 +137,6 @@ export default function App() {
             <Transcript
               items={active.items}
               typing={active.typing}
-              onAnswer={(id, a) => agents.current.get(active.id)?.answer(id, a)}
-              onDecide={(id, d) => agents.current.get(active.id)?.decide(id, d)}
             />
           ) : (
             <StartScreen onStart={start} />
