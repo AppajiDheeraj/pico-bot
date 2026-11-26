@@ -9,7 +9,7 @@ export function srsMarkdown(s: Srs) {
     `## Summary\n${s.summary}`,
     `## Assumptions\n${s.assumptions.map((a) => `- ${a}`).join("\n")}`,
     `## Stakeholders\n${s.stakeholders.map((a) => `- ${a}`).join("\n")}`,
-    `## Requirements\n${table(["ID", "Statement", "Category", "Priority", "Acceptance criteria", "Source"], s.requirements.map((r) => [r.id, r.statement, r.category, r.priority, r.acceptance, r.source]))}`,
+    `## Requirements\n${table(["ID", "Statement", "Category", "Acceptance criteria", "Evidence"], s.requirements.map((r) => [r.id, r.statement, r.category, r.acceptance, r.source]))}`,
     `## Quality findings\n${s.findings.map((f) => `- **${f.type}**: ${f.text}`).join("\n")}`,
     `## Traceability\n${table(["Requirement", "Test case", "Checks"], s.traceability.map((t) => [t.req, t.test, t.check]))}`,
     `## Risks\n${s.risks.map((r) => `- **${r.title}**: ${r.text}`).join("\n")}`,
@@ -19,13 +19,12 @@ export function srsMarkdown(s: Srs) {
 }
 
 export function sdlcMarkdown(d: Sdlc) {
+  const top = d.ranking[0];
   return [
     `# SDLC Recommendation`,
-    `## Decision factors\n${table(["Factor", "Value", "Cited IDs", "Implication", "Confidence"], d.factors.map((f) => [f.name, f.value, f.cites, f.implication, f.confidence]))}`,
-    `## Ranking\n${d.ranking.map((r, i) => `${i + 1}. **${r.model}** — ${r.score}/100 — ${r.why}`).join("\n")}`,
-    `## Chosen SDLC\n**${d.chosen}**\n\n${d.justification}`,
-    `## Alternatives rejected\n${d.rejected.map((r) => `- **${r.model}**: ${r.why}`).join("\n")}`,
-    `## Project workflow\n${table(["Phase", "Activities", "Roles", "Deliverables", "Exit gate", "Requirements"], d.workflow.map((w) => [w.phase, w.activities, w.roles, w.deliverables, w.gate, w.reqs]))}`,
+    `**Recommended: ${d.chosen} (${top.score}/100)**\n\n${d.justification}`,
+    `## Ranking\n${table(["Model", "Score", "Good at", "Why not chosen"], d.ranking.map((r, i) => [r.model, String(r.score), r.fit, i === 0 ? "— (chosen)" : r.miss]))}`,
+    `## Decision factors\n${table(["Factor", "Level", "Based on", "Implication"], d.factors.map((f) => [f.name, f.value, f.cites, f.implication]))}`,
     `> **Human review required** before adopting this lifecycle.`,
   ].join("\n\n");
 }

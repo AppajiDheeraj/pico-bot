@@ -1,7 +1,7 @@
-import { ChevronDown, Download, FileText, GitBranch, ShieldAlert, Trophy } from "lucide-react";
+import { ChevronDown, Download, FileText, GitBranch, Trophy } from "lucide-react";
 import { useState } from "react";
 import { download, sdlcMarkdown, srsMarkdown } from "../lib/export";
-import type { Requirement, Sdlc, Srs } from "../lib/types";
+import type { Sdlc, Srs } from "../lib/types";
 
 function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (t: T) => void }) {
   return (
@@ -14,10 +14,6 @@ function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; labe
       ))}
     </div>
   );
-}
-
-function PriorityBadge({ p }: { p: Requirement["priority"] }) {
-  return <span className={`badge prio-${p.toLowerCase()}`}>{p}</span>;
 }
 
 function DocHead({ icon, title, meta, onExport }: { icon: React.ReactNode; title: string; meta: string; onExport: () => void }) {
@@ -69,7 +65,6 @@ export function SrsCard({ srs }: { srs: Srs }) {
                     <span className="req-id">{r.id}</span>
                     <span className="req-text">{r.statement}</span>
                     <span className="req-cat">{r.category}</span>
-                    <PriorityBadge p={r.priority} />
                     <ChevronDown size={14} className="req-chev" />
                   </button>
                   {openRow === r.id && (
@@ -175,7 +170,8 @@ export function SrsCard({ srs }: { srs: Srs }) {
 }
 
 export function SdlcCard({ sdlc }: { sdlc: Sdlc }) {
-  const [tab, setTab] = useState<"ranking" | "workflow" | "factors" | "rejected">("ranking");
+  const [tab, setTab] = useState<"ranking" | "factors">("ranking");
+  const [openModel, setOpenModel] = useState<string | null>(sdlc.ranking[0].model);
   const top = sdlc.ranking[0];
   return (
     <div className="card doc">
@@ -201,55 +197,36 @@ export function SdlcCard({ sdlc }: { sdlc: Sdlc }) {
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: "ranking", label: "Ranking" },
-          { id: "workflow", label: "Workflow", count: sdlc.workflow.length },
+          { id: "ranking", label: "Why this model" },
           { id: "factors", label: "Decision factors", count: sdlc.factors.length },
-          { id: "rejected", label: "Rejected" },
         ]}
       />
       <div className="doc-body">
         {tab === "ranking" && (
           <div className="bars">
+            <p className="doc-note">Click a model to see why it was or wasn’t chosen.</p>
             {sdlc.ranking.map((r, i) => (
-              <div key={r.model} className="bar-row" data-top={i === 0 || undefined}>
-                <span className="bar-name">{r.model}</span>
-                <span className="bar-track">
-                  <span className="bar-fill" style={{ width: `${r.score}%`, animationDelay: `${i * 60}ms` }} />
-                </span>
-                <span className="bar-score">{r.score}</span>
+              <div key={r.model}>
+                <button className="bar-row" data-top={i === 0 || undefined} aria-expanded={openModel === r.model} onClick={() => setOpenModel((m) => (m === r.model ? null : r.model))}>
+                  <span className="bar-name">{r.model}</span>
+                  <span className="bar-track">
+                    <span className="bar-fill" style={{ width: `${r.score}%`, animationDelay: `${i * 60}ms` }} />
+                  </span>
+                  <span className="bar-score">{r.score}</span>
+                </button>
+                {openModel === r.model && (
+                  <div className="bar-detail">
+                    <div>
+                      <strong>Good at:</strong> {r.fit}.
+                    </div>
+                    <div>
+                      <strong>{i === 0 ? "Watch out:" : "Not chosen:"}</strong> {r.miss}.
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        )}
-        {tab === "workflow" && (
-          <ol className="steps">
-            {sdlc.workflow.map((w, i) => (
-              <li key={w.phase} className="step">
-                <span className="step-dot">{i + 1}</span>
-                <div className="step-body">
-                  <div className="step-title">{w.phase}</div>
-                  <div className="step-text">{w.activities}</div>
-                  <div className="step-meta">
-                    <span>
-                      <span className="label">Roles</span>
-                      {w.roles}
-                    </span>
-                    <span>
-                      <span className="label">Delivers</span>
-                      {w.deliverables}
-                    </span>
-                    <span>
-                      <span className="label">Reqs</span>
-                      {w.reqs}
-                    </span>
-                  </div>
-                  <div className="gate">
-                    <ShieldAlert size={12} /> Exit gate: {w.gate}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
         )}
         {tab === "factors" && (
           <table className="grid">
@@ -274,15 +251,6 @@ export function SdlcCard({ sdlc }: { sdlc: Sdlc }) {
               ))}
             </tbody>
           </table>
-        )}
-        {tab === "rejected" && (
-          <ul className="plain-list">
-            {sdlc.rejected.map((r) => (
-              <li key={r.model}>
-                <strong>{r.model}:</strong> {r.why}
-              </li>
-            ))}
-          </ul>
         )}
       </div>
     </div>

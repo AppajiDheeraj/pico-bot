@@ -30,11 +30,10 @@ export type Level = "Low" | "Medium" | "High";
 
 export type Sdlc = {
   factors: { name: string; value: string; cites: string; implication: string; confidence: Level }[];
-  ranking: { model: string; score: number; why: string }[];
+  /** Best first. score = base + Σ driver points (Low 0, Medium 1, High 2 × weight), capped to 5–97. */
+  ranking: { model: string; score: number; base: number; fit: string; miss: string; drivers: { factor: string; level: Level; points: number }[] }[];
   chosen: string;
   justification: string;
-  rejected: { model: string; why: string }[];
-  workflow: { phase: string; activities: string; roles: string; deliverables: string; gate: string; reqs: string }[];
 };
 
 export type Option = { label: string; recommended?: boolean };

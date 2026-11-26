@@ -4,6 +4,7 @@ Run:  uvicorn server:app --port 8000
 """
 import asyncio
 import json
+import re
 import time
 import uuid
 from pathlib import Path
@@ -64,21 +65,24 @@ def evidence_block(hits: dict[str, str]) -> str:
     return "\n".join(f'<evidence id="E{i}">{text}</evidence>' for i, text in enumerate(hits.values(), 1))
 
 
-async def plan_sdlc(srs: dict, trace: list) -> dict:
+async def plan_sdlc(brief: str, srs: dict, trace: list) -> dict:
     """Agent (ii): rate the decision factors; rules.rank scores the models; the planner explains and plans."""
     compact = json.dumps([{k: r[k] for k in ("id", "statement", "category", "priority")} for r in srs["requirements"]])
     criteria = f'<evidence id="criteria">{rules.CHUNKS["product/sdlc-selection-criteria.txt#chunk-1"]}</evidence>'
-    rated = await ask(planner, RATE, trace=trace, context=f"Decision factors: {rules.FACTORS}\n\nSRS requirements: {compact}\nRisks: {json.dumps(srs['risks'])}\n\n{criteria}")
+    rated = await ask(planner, RATE, trace=trace, context=f"Decision factors: {rules.FACTORS}\n\nBrief:\n{brief}\n\nSRS requirements: {compact}\n\n{criteria}")
+    ids = {r["id"] for r in srs["requirements"]}
     for f in rated["factors"]:
-        f["confidence"] = "High" if f["cites"].strip(" -") else "Low"  # a rating backed by requirement IDs is trusted more
-    ranking = rules.rank({f["name"]: f["value"] for f in rated["factors"]})
-    chosen, score = ranking[0]
-    plan = await ask(planner, PLAN, trace=trace, context=f"Chosen SDLC: {chosen} ({score}/100). Ranking: {ranking}\nFactors: {json.dumps(rated['factors'])}\nSRS requirements: {compact}\n\n{criteria}")
+        f["cites"] = ", ".join(c for c in re.findall(r"R\d+", f["cites"]) if c in ids) or "—"  # only real requirement IDs
+        f["implication"] = rules.clip(rules.plain(f["implication"]))
+        f["confidence"] = "High" if f["cites"] != "—" else "Low"  # a rating backed by requirement IDs is trusted more
+    ranking = rules.explain({f["name"]: f["value"] for f in rated["factors"]})
+    top = ranking[0]
+    drivers = ", ".join(f"{d['factor']} {d['level']} ({d['points']:+})" for d in top["drivers"])
+    others = ", ".join(f"{r['model']} {r['score']}" for r in ranking[1:])
+    plan = await ask(planner, PLAN, trace=trace, context=f"Chosen SDLC: {top['model']} ({top['score']}/100). Score drivers: {drivers}. Others: {others}\nFactors: {json.dumps(rated['factors'])}\nSRS requirements: {compact}\n\n{criteria}")
     plan["justification"] = rules.plain(plan["justification"][: plan["justification"].rfind(".") + 1] or plan["justification"])  # length cap may cut mid-sentence
     return {
-        "factors": rated["factors"], "chosen": chosen, **plan,
-        "ranking": [{"model": m, "score": sc, "why": rules.WHY[m][0]} for m, sc in ranking],
-        "rejected": [{"model": m, "why": rules.WHY[m][1]} for m, _ in ranking[1:]],
+        "factors": rated["factors"], "chosen": top["model"], **plan, "ranking": ranking,
     }
 
 
@@ -108,7 +112,7 @@ async def run(s: Session, brief: str):
     await s.emit("stage", stage="sdlc")
     await s.push("event", icon="handoff", text="Handed off to", strong="SDLC Planner")
     await s.emit("working", agents=["planner"])
-    sdlc = await plan_sdlc(srs, s.trace)
+    sdlc = await plan_sdlc(brief, srs, s.trace)
     chosen, ranking = sdlc["chosen"], sdlc["ranking"]
     await s.delegate(("pico", "planner", f"SRS attached ({len(srs['requirements'])} requirements). Recommend a lifecycle."),
                      ("planner", "pico", f"Rated {len(sdlc['factors'])} decision factors; scored {len(ranking)} models."),
@@ -117,7 +121,7 @@ async def run(s: Session, brief: str):
     await s.push("sdlc", sdlc=sdlc)
 
     await s.emit("stage", stage="review")
-    await s.say(f"Done. **{chosen}** fits best: {len(sdlc['workflow'])} phases, each with an exit gate tied to requirement IDs.")
+    await s.say(f"Done. **{chosen}** fits best. Open a model in the ranking to see why it was or wasn't chosen.")
     await s.push("notice", title="Needs human review", text="Regulatory interpretation, the requirements baseline and the SDLC choice must be approved by a qualified person. Treat this as a draft.")
     await s.emit("stage", stage="done")
 

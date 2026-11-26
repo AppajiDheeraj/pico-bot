@@ -71,9 +71,18 @@ def search(query: str, k: int = 4) -> dict[str, str]:
 
 def plain(text: str) -> str:
     """Remove evidence labels (E1…E5) from text people read; the source field keeps the real citation."""
-    text = re.sub(r"\s*\((?:E\d[,;\s]*)+\)", "", text)
-    text = re.sub(r"\bE\d\b", "the regulation", text)
+    text = re.sub(r"\s*\((?:citing|see|per|from)?\s*(?:E\d[,;\s]*(?:and\s*)?)+\)", "", text, flags=re.I)
+    text = re.sub(r"\bE\d(?:\s*(?:,|and)\s*E\d)*\b", "the regulation", text)
     return text[:1].upper() + text[1:]
+
+
+def clip(text: str, limit: int = 80) -> str:
+    """Shorten model text cut off by its length cap: end at the last full sentence, else the last whole word."""
+    text = text.strip()
+    if len(text) <= limit and text[-1:] in ".!?)":
+        return text
+    end = max(text.rfind(". ", 0, limit), text.rfind("; ", 0, limit))
+    return text[:end] + "." if end > 20 else text[:limit].rsplit(" ", 1)[0].rstrip(",;:(") + "…"
 
 
 VAGUE = re.compile(r"\b(fast|quick|easy|user[- ]friendly|real[- ]time|secure|robust|efficient|appropriate|as needed|etc)\b", re.I)
@@ -138,7 +147,7 @@ MODELS = {
 }
 
 
-# Why each model fits, and why it is passed over (shown in the ranking and the "Rejected" tab).
+# Why each model fits, and why it is passed over (shown next to each model in the ranking).
 WHY = {
     "Waterfall": ("stable requirements and extensive approvals", "testing comes late, so verification evidence arrives after design is locked"),
     "V-Model": ("strict verification and validation: every build phase has a matching test phase", "rigid once a phase closes; late changes are expensive"),
@@ -150,13 +159,21 @@ WHY = {
 }
 
 
+def explain(levels: dict[str, str]) -> list[dict]:
+    """Every model, best first: score = base + Σ weight × level (Low 0, Medium 1, High 2), capped to 5–97.
+    `drivers` lists each factor's points, so the UI can show exactly how a score adds up."""
+    rows = []
+    for m, (base, weights) in MODELS.items():
+        drivers = [{"factor": f, "level": levels.get(f, "Medium"), "points": w * LEVEL.get(levels.get(f, "Medium"), 1)} for f, w in weights.items()]
+        drivers = sorted((d for d in drivers if d["points"]), key=lambda d: -abs(d["points"]))
+        score = max(5, min(97, base + sum(d["points"] for d in drivers)))
+        rows.append({"model": m, "score": score, "base": base, "drivers": drivers, "fit": WHY[m][0], "miss": WHY[m][1]})
+    return sorted(rows, key=lambda r: -r["score"])
+
+
 def rank(levels: dict[str, str]) -> list[tuple[str, int]]:
-    """[(model, score 5–97)] best first. Same input → same ranking, so it can't contradict the choice."""
-    scores = {
-        m: max(5, min(97, base + sum(w * LEVEL.get(levels.get(f, "Medium"), 1) for f, w in weights.items())))
-        for m, (base, weights) in MODELS.items()
-    }
-    return sorted(scores.items(), key=lambda kv: -kv[1])
+    """[(model, score)] best first. Same input → same ranking, so it can't contradict the choice."""
+    return [(r["model"], r["score"]) for r in explain(levels)]
 
 
 if __name__ == "__main__":  # self-check: python rules.py
@@ -174,4 +191,8 @@ if __name__ == "__main__":  # self-check: python rules.py
     assert rank(bank)[0][0] == "V-Model"
     shop = dict.fromkeys(FACTORS, "Low") | {"Expected change frequency": "High", "Need for continuous delivery": "High", "Security risk": "High"}
     assert rank(shop)[0][0] in ("Agile", "DevSecOps")
+    assert clip("Short and done.") == "Short and done." and clip("Needs formal checks; audits (R7) are mandatory and costly to redo late in the") == "Needs formal checks; audits (R7) are mandatory and costly to redo late in…"
+    top = explain(bank)[0]
+    assert top["score"] == max(5, min(97, top["base"] + sum(d["points"] for d in top["drivers"])))
+    assert plain("High risk (citing E1, E2).") == "High risk." and plain("per E1, E2 and E3") == "Per the regulation"
     print(f"ok — {len(CHUNKS)} chunks indexed")

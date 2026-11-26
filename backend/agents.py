@@ -67,25 +67,15 @@ class Factor(BaseModel):
     name: Literal[tuple(rules.FACTORS)]
     value: Level
     cites: str = Field(max_length=40, description="Requirement IDs that justify the rating, e.g. R2, R5")
-    implication: str = Field(max_length=60)
+    implication: str = Field(max_length=90, description="One short phrase, under 12 words")
 
 
 class Factors(BaseModel):
     factors: list[Factor] = Field(min_length=len(rules.FACTORS), max_length=len(rules.FACTORS))
 
 
-class Phase(BaseModel):
-    phase: str = Field(max_length=60)
-    activities: str = Field(max_length=140)
-    roles: str = Field(max_length=70)
-    deliverables: str = Field(max_length=100)
-    gate: str = Field(max_length=140, description="Exit gate: security, compliance or human-approval checkpoint")
-    reqs: str = Field(max_length=60, description="Requirement IDs this phase covers, e.g. R1, R4")
-
-
 class Plan(BaseModel):
-    justification: str = Field(max_length=600, description="2-4 sentences")
-    workflow: list[Phase] = Field(min_length=4, max_length=6)
+    justification: str = Field(max_length=600, description="2-3 sentences")
 
 
 # ---------- The two agents ----------
@@ -107,14 +97,17 @@ planner = LlmAgent(name="planner", model=MODEL, instruction=(
 # What each agent is asked to do, step by step, and the JSON shape it must answer in.
 REQUIREMENTS = ("List the software requirements from the brief and the evidence: 8-10 requirements "
                 "covering functional and non-functional needs (security, privacy, regulatory, audit, performance). Every "
-                "acceptance criterion must be measurable. Do not put IDs in statements.", Requirements)
+                "acceptance criterion must be measurable. Do not put IDs in statements. Priority: High = a legal or regulatory duty, "
+                "security, or moving or recording money; Medium = needed to run or support the system; Low = convenience.", Requirements)
 OVERVIEW = ("Write the SRS overview for the brief: title, summary, assumptions, stakeholders, "
             "and honestly the main quality findings (ambiguous or missing information), risks and open issues.", Overview)
 RATE = ("Rate every listed decision factor Low, Medium or High for this SRS (High = the project has more of it, e.g. High "
-        "requirement stability = requirements will rarely change), citing the requirement IDs behind each rating.", Factors)
-PLAN = ("The chosen SDLC and its score are given. Explain why it fits this SRS and write a "
-        "project-specific workflow: phases with activities, roles, deliverables, an exit gate (security, compliance or "
-        "human-approval checkpoint) and requirement IDs.", Plan)
+        "requirement stability = requirements will rarely change), citing the requirement IDs behind each rating. "
+        "Judge requirement stability and expected change frequency from the brief only: they are about how often the "
+        "requirements will be rewritten during the project, not scheduled jobs, reviews or possible future regulation. "
+        "Rate change High only if the brief says needs are still evolving. Cite requirement IDs (R1, R2…) only.", Factors)
+PLAN = ("The chosen SDLC, its score and its strongest score drivers are given. In 2-3 plain sentences explain why it fits, "
+        "naming those drivers and the requirement IDs behind them (never evidence ids).", Plan)
 
 
 async def ask(agent: LlmAgent, step: tuple[str, type[BaseModel]], context: str, trace: list) -> dict:

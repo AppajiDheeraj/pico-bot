@@ -77,12 +77,12 @@ export const SCENARIOS: Scenario[] = [
       ],
       stakeholders: ["RBI compliance officer", "Risk management", "Internal audit & legal", "IT operations", "Branch & finance analysts"],
       requirements: [
-        { statement: "Record deposits, withdrawals and interest postings in real time.", category: "Functional", priority: "High", acceptance: "Every posting is stored with a timestamp and a unique transaction ID within 1 s of commit.", source: "rbi-digital-payment-security-controls-2021#4" },
-        { statement: "Calculate and post interest as defined by the applicable RBI circular.", category: "Regulatory", priority: "High", acceptance: "Interest on a reference set of 1,000 accounts matches the circular's worked examples to the paisa.", source: "problem-statement#1" },
-        { statement: "Keep an immutable audit trail for every transaction.", category: "Security", priority: "High", acceptance: "Each entry is traceable to a transaction ID, user ID, IP and time; edits create reversal entries, never updates.", source: "rbi-digital-payment-security-controls-2021#13" },
-        { statement: "Guarantee atomic, consistent double-entry postings.", category: "Functional", priority: "High", acceptance: "Debits equal credits after every commit; a failed posting leaves no partial entries.", source: "rbi-digital-payment-security-controls-2021#4" },
-        { statement: "Produce full test documentation for each release.", category: "Compliance", priority: "High", acceptance: "Test plan, cases and results are archived per release and linked to requirement IDs.", source: "problem-statement#1" },
-        { statement: "Trace every requirement to at least one test case.", category: "Compliance", priority: "High", acceptance: "The traceability matrix has no requirement without a test.", source: "problem-statement#1" },
+        { statement: "Record deposits, withdrawals and interest postings in real time.", category: "Functional", priority: "High", acceptance: "Every posting is stored with a timestamp and a unique transaction ID within 1 s of commit.", source: "brief" },
+        { statement: "Calculate and post interest as defined by the applicable RBI circular.", category: "Regulatory", priority: "High", acceptance: "Interest on a reference set of 1,000 accounts matches the circular's worked examples to the paisa.", source: "brief" },
+        { statement: "Keep an immutable audit trail for every transaction.", category: "Security", priority: "High", acceptance: "Each entry is traceable to a transaction ID, user ID, IP and time; edits create reversal entries, never updates.", source: "finance/rbi-it-governance-2023.txt#chunk-17" },
+        { statement: "Guarantee atomic, consistent double-entry postings.", category: "Functional", priority: "High", acceptance: "Debits equal credits after every commit; a failed posting leaves no partial entries.", source: "brief" },
+        { statement: "Produce full test documentation for each release.", category: "Compliance", priority: "High", acceptance: "Test plan, cases and results are archived per release and linked to requirement IDs.", source: "brief" },
+        { statement: "Trace every requirement to at least one test case.", category: "Compliance", priority: "High", acceptance: "The traceability matrix has no requirement without a test.", source: "brief" },
       ],
       risks: [
         { title: "Regulatory interpretation", text: "Different readings of the circular could change interest logic late, forcing rework." },
@@ -111,7 +111,7 @@ export const SCENARIOS: Scenario[] = [
       stakeholders: ["MSME borrowers", "Credit team", "Compliance officer", "Collections", "IT operations"],
       requirements: [
         { statement: "Capture the loan application with business and promoter details.", category: "Functional", priority: "High", acceptance: "An application completes in under 15 minutes with save-and-resume.", source: "brief" },
-        { statement: "Verify the borrower's KYC before any credit check.", category: "Regulatory", priority: "High", acceptance: "No bureau pull happens for an application without completed KYC.", source: "finance/rbi-kyc-master-direction-2024.txt" },
+        { statement: "Verify the borrower's KYC before any credit check.", category: "Regulatory", priority: "High", acceptance: "No bureau pull happens for an application without completed KYC.", source: "finance/rbi-kyc-master-direction-2024.txt#chunk-42" },
         { statement: "Record the reason for every credit decision.", category: "Audit", priority: "High", acceptance: "Each approve/decline stores the rules or score bands that drove it.", source: "brief" },
         { statement: "Disburse only to an account verified in the borrower's name.", category: "Security", priority: "High", acceptance: "Penny-drop name match ≥ 90% before disbursal.", source: "brief" },
         { statement: "Show the borrower a key facts statement before acceptance.", category: "Regulatory", priority: "High", acceptance: "Acceptance is blocked until the KFS is shown and acknowledged.", source: "brief" },
@@ -141,8 +141,8 @@ export const SCENARIOS: Scenario[] = [
       stakeholders: ["Retail customers", "Merchants", "Fraud operations", "Information security", "Compliance officer"],
       requirements: [
         { statement: "Let customers send money to a UPI ID or by scanning a QR code.", category: "Functional", priority: "High", acceptance: "A payment completes in under 5 seconds at p95.", source: "brief" },
-        { statement: "Lock the account after repeated failed authentication attempts.", category: "Security", priority: "High", acceptance: "Access is blocked after 5 failed attempts and the customer is alerted.", source: "finance/rbi-digital-payment-security-controls-2021.txt" },
-        { statement: "Alert the customer on every debit.", category: "Security", priority: "High", acceptance: "An SMS or push alert is sent within 30 seconds of each debit.", source: "finance/rbi-digital-payment-security-controls-2021.txt" },
+        { statement: "Lock the account after repeated failed authentication attempts.", category: "Security", priority: "High", acceptance: "Access is blocked after 5 failed attempts and the customer is alerted.", source: "finance/rbi-digital-payment-security-controls-2021.txt#chunk-20" },
+        { statement: "Alert the customer on every debit.", category: "Security", priority: "High", acceptance: "An SMS or push alert is sent within 30 seconds of each debit.", source: "finance/rbi-digital-payment-security-controls-2021.txt#chunk-20" },
         { statement: "Score every transaction for fraud in real time.", category: "Security", priority: "High", acceptance: "Fraud score returned within 200 ms for 99% of transactions.", source: "brief" },
         { statement: "Keep an immutable record of every payment.", category: "Audit", priority: "High", acceptance: "Records cannot be edited; corrections are reversal entries.", source: "brief" },
       ],
@@ -170,11 +170,11 @@ export const SCENARIOS: Scenario[] = [
       assumptions: ["Customers are Indian residents with a valid PAN.", "Video KYC is done by trained bank officials."],
       stakeholders: ["New customers", "KYC officials", "Compliance officer", "Information security", "Operations"],
       requirements: [
-        { statement: "Verify identity through Aadhaar e-KYC or a live video KYC session.", category: "Regulatory", priority: "High", acceptance: "No account is activated without a completed KYC record.", source: "finance/rbi-kyc-master-direction-2024.txt" },
-        { statement: "Check the liveness of the customer during video KYC.", category: "Security", priority: "High", acceptance: "Randomised liveness prompts; failed checks end the session.", source: "finance/rbi-kyc-master-direction-2024.txt" },
-        { statement: "Assign every customer a risk category at onboarding.", category: "Regulatory", priority: "High", acceptance: "Each account is tagged low, medium or high risk with the reason stored.", source: "finance/rbi-kyc-master-direction-2024.txt" },
+        { statement: "Verify identity through Aadhaar e-KYC or a live video KYC session.", category: "Regulatory", priority: "High", acceptance: "No account is activated without a completed KYC record.", source: "finance/rbi-kyc-master-direction-2024.txt#chunk-44" },
+        { statement: "Check the liveness of the customer during video KYC.", category: "Security", priority: "High", acceptance: "Randomised liveness prompts; failed checks end the session.", source: "finance/rbi-kyc-master-direction-2024.txt#chunk-54" },
+        { statement: "Assign every customer a risk category at onboarding.", category: "Regulatory", priority: "High", acceptance: "Each account is tagged low, medium or high risk with the reason stored.", source: "finance/rbi-kyc-master-direction-2024.txt#chunk-38" },
         { statement: "Store KYC documents encrypted and access-logged.", category: "Privacy", priority: "High", acceptance: "AES-256 at rest; every access logged with user and time.", source: "brief" },
-        { statement: "Trigger periodic KYC updates by risk category.", category: "Regulatory", priority: "Medium", acceptance: "Update reminders are raised on the schedule set for each risk category.", source: "finance/rbi-kyc-master-direction-2024.txt" },
+        { statement: "Trigger periodic KYC updates by risk category.", category: "Regulatory", priority: "Medium", acceptance: "Update reminders are raised on the schedule set for each risk category.", source: "finance/rbi-kyc-amendment-2025.txt#chunk-4" },
       ],
       risks: [
         { title: "Identity fraud", text: "Deepfakes and stolen documents can pass weak video KYC." },
@@ -206,10 +206,10 @@ export function customScenario(brief: string): Scenario {
       assumptions: ["The brief describes the full scope of the first release."],
       stakeholders: ["End users", "Product owner", "Engineering", "Operations"],
       requirements: [
-        { statement: "Provide the core workflow described in the brief.", category: "Functional", priority: "High", acceptance: "A user can complete the main task end to end without help.", source: "brief#1" },
-        { statement: "Authenticate users and enforce role-based access.", category: "Security", priority: "High", acceptance: "Every action is checked against the user's role.", source: "brief#1" },
-        { statement: "Log key actions for troubleshooting and audit.", category: "Security", priority: "Medium", acceptance: "Logs include user, action and timestamp.", source: "brief#1" },
-        { statement: "Respond quickly under normal load.", category: "Performance", priority: "Medium", acceptance: "95% of requests finish in under 500 ms.", source: "brief#1" },
+        { statement: "Provide the core workflow described in the brief.", category: "Functional", priority: "High", acceptance: "A user can complete the main task end to end without help.", source: "brief" },
+        { statement: "Authenticate users and enforce role-based access.", category: "Security", priority: "High", acceptance: "Every action is checked against the user's role.", source: "brief" },
+        { statement: "Log key actions for troubleshooting and audit.", category: "Security", priority: "Medium", acceptance: "Logs include user, action and timestamp.", source: "brief" },
+        { statement: "Respond quickly under normal load.", category: "Performance", priority: "Medium", acceptance: "95% of requests finish in under 500 ms.", source: "brief" },
       ],
       risks: [{ title: "Scope creep", text: "An open-ended brief invites late additions." }],
     },
@@ -237,9 +237,9 @@ export function buildSrs(s: Scenario, answers: Answer[]): { srs: Srs; traits: Tr
     }
     // Scenario-specific folding (kept small and readable on purpose).
     if (qn.id === "interest" && v) reqs[1] = { ...reqs[1], acceptance: `${v}; results match the circular's worked examples to the paisa.` };
-    if (qn.id === "signoff" && v) reqs.push({ statement: "Require a recorded human approval before every release.", category: "Compliance", priority: "High", acceptance: `Deployment is blocked until ${v.toLowerCase()} records sign-off for that build.`, source: "answer:signoff" });
+    if (qn.id === "signoff" && v) reqs.push({ statement: "Require a recorded human approval before every release.", category: "Compliance", priority: "High", acceptance: `Deployment is blocked until ${v.toLowerCase()} records sign-off for that build.`, source: "assumption" });
     if (qn.id === "integration" && v && !/none/i.test(v)) {
-      reqs.push({ statement: `Integrate with ${v.replace(/\(.*\)/, "").trim()}.`, category: "Integration", priority: "Medium", acceptance: "Postings reconcile with the connected system at end of day with zero breaks.", source: "answer:integration" });
+      reqs.push({ statement: `Integrate with ${v.replace(/\(.*\)/, "").trim()}.`, category: "Integration", priority: "Medium", acceptance: "Postings reconcile with the connected system at end of day with zero breaks.", source: "assumption" });
       traits.complexity = "High";
     }
     if ((qn.id === "volume" || qn.id === "peak" || qn.id === "size") && v) {
@@ -251,7 +251,7 @@ export function buildSrs(s: Scenario, answers: Answer[]): { srs: Srs; traits: Tr
       traits.stability = /fixed/i.test(v) ? "High" : /mostly/i.test(v) ? "Medium" : "Low";
       traits.change = /fixed/i.test(v) ? "Low" : /mostly/i.test(v) ? "Medium" : "High";
     }
-    if (qn.id === "platform" && v) reqs.push({ statement: `Ship as a ${v.toLowerCase()}.`, category: "Platform", priority: "High", acceptance: "Core flows pass on the target platforms' current versions.", source: "answer:platform" });
+    if (qn.id === "platform" && v) reqs.push({ statement: `Ship as a ${v.toLowerCase()}.`, category: "Platform", priority: "High", acceptance: "Core flows pass on the target platforms' current versions.", source: "assumption" });
   }
 
   if (s.key === "finance") {

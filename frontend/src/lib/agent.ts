@@ -71,7 +71,7 @@ export function createMockSession(speed = 1): AgentSession {
     const sdlc = planSdlc(built.srs, built.traits);
     await delegate(
       [
-        { from: "pico", to: "planner", text: `SRS attached (${built.srs.requirements.length} requirements). Recommend a lifecycle and a project-specific workflow.` },
+        { from: "pico", to: "planner", text: `SRS attached (${built.srs.requirements.length} requirements). Recommend a lifecycle.` },
         { from: "planner", to: "pico", text: `Scored ${sdlc.ranking.length} lifecycle models against ${sdlc.factors.length} decision factors from the SRS.` },
         { from: "planner", to: "pico", text: `${sdlc.chosen} leads at ${sdlc.ranking[0].score}/100; ${sdlc.ranking[1].model} is next at ${sdlc.ranking[1].score}.` },
       ],
@@ -83,7 +83,7 @@ export function createMockSession(speed = 1): AgentSession {
     push({ kind: "sdlc", id: uid("s"), sdlc, at: Date.now() });
 
     emit({ type: "stage", stage: "review" });
-    await say("pico", `Done. **${sdlc.chosen}** fits best: ${sdlc.workflow.length} phases, each with an entry/exit gate tied to the requirement IDs. Both documents are in the panel on the right if you want to export them.`, 900);
+    await say("pico", `Done. **${sdlc.chosen}** fits best. Both documents are in the panel on the right if you want to export them.`, 900);
     push({
       kind: "notice",
       id: uid("n"),
