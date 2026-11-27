@@ -2,9 +2,9 @@ import { ArrowRightLeft, ChevronDown, Clock, FileText, Moon, TriangleAlert, Wren
 import { useState } from "react";
 import { CREW } from "../data/crew";
 import { Inline } from "../lib/inline";
-import type { AgentId, Item } from "../lib/types";
+import type { AgentId, Item, Srs } from "../lib/types";
 import { AgentAvatar, FaceStack } from "./Avatar";
-import { SdlcCard, SrsCard } from "./Cards";
+import { IeeeCard, SdlcCard, SrsCard } from "./Cards";
 import { TraceChip } from "./Trace";
 
 type Props = {
@@ -15,13 +15,14 @@ type Props = {
 const fmtTime = (t: number) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 export function Transcript({ items, typing }: Props) {
+  const srs = items.findLast((i) => i.kind === "srs");
   return (
     <div className="transcript">
       {items.length > 0 && <div className="time-sep">Today {fmtTime(items[0].at)}</div>}
       {items.map((it, i) => {
         const next = items[i + 1];
         const lastOfRun = it.kind === "bot" && !(next?.kind === "bot" && next.from === it.from) && !(typing === it.from && !next);
-        return <Row key={it.id} item={it} showAvatar={lastOfRun} />;
+        return <Row key={it.id} item={it} showAvatar={lastOfRun} srs={srs?.kind === "srs" ? srs.srs : undefined} />;
       })}
       {typing && (
         <div className="row bot enter">
@@ -41,7 +42,7 @@ export function Transcript({ items, typing }: Props) {
   );
 }
 
-function Row({ item, showAvatar }: { item: Item; showAvatar: boolean }) {
+function Row({ item, showAvatar, srs }: { item: Item; showAvatar: boolean; srs?: Srs }) {
   switch (item.kind) {
     case "user":
       return (
@@ -74,6 +75,13 @@ function Row({ item, showAvatar }: { item: Item; showAvatar: boolean }) {
         <div className="row bot full enter">
           <span className="row-avatar" />
           <SdlcCard sdlc={item.sdlc} />
+        </div>
+      );
+    case "ieee":
+      return (
+        <div className="row bot full enter">
+          <span className="row-avatar" />
+          <IeeeCard ieee={item.ieee} title={item.title} srs={srs} />
         </div>
       );
     case "notice":

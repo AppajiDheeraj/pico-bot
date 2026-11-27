@@ -1,7 +1,7 @@
-import { ChevronDown, Download, FileText, GitBranch, Trophy } from "lucide-react";
+import { BookOpen, ChevronDown, Download, FileText, GitBranch, Trophy } from "lucide-react";
 import { useState } from "react";
-import { download, sdlcMarkdown, srsMarkdown } from "../lib/export";
-import type { Sdlc, Srs } from "../lib/types";
+import { download, ieeeHtml, printPdf, sdlcMarkdown, srsMarkdown } from "../lib/export";
+import type { Ieee, Sdlc, Srs } from "../lib/types";
 
 function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (t: T) => void }) {
   return (
@@ -27,6 +27,19 @@ function DocHead({ icon, title, meta, onExport }: { icon: React.ReactNode; title
       <button className="btn secondary sm" onClick={onExport}>
         <Download size={14} /> Export
       </button>
+    </div>
+  );
+}
+
+export function IeeeCard({ ieee, title, srs }: { ieee: Ieee; title: string; srs?: Srs }) {
+  return (
+    <div className="card doc">
+      <DocHead
+        icon={<BookOpen size={18} />}
+        title={`IEEE 830 SRS · ${title}`}
+        meta={`${ieee.functions.length} functions · ${ieee.entities.length} entities · ${ieee.quality.length} quality attributes · PDF`}
+        onExport={() => printPdf(ieeeHtml(title, ieee, srs))}
+      />
     </div>
   );
 }

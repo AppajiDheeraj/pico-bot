@@ -1,7 +1,7 @@
 // Shared shapes between the chat UI and the agent runtime.
 // The future ADK backend should stream exactly these events (JSON over SSE / WebSocket).
 
-export type AgentId = "pico" | "analyst" | "planner";
+export type AgentId = "pico" | "analyst" | "planner" | "writer";
 
 export type Priority = "High" | "Medium" | "Low";
 
@@ -36,6 +36,29 @@ export type Sdlc = {
   justification: string;
 };
 
+/** IEEE 830-1998 sections written by the IEEE Writer (backend/agents.py IeeeIntro + IeeeSpecific). */
+export type Ieee = {
+  purpose: string;
+  included: string[];
+  excluded: string[];
+  definitions: { term: string; definition: string }[];
+  references: string[];
+  perspective: string;
+  productFunctions: string[];
+  functions: { name: string; input: string; processing: string[]; output: string; requirement: string }[];
+  users: { user: string; characteristics: string }[];
+  constraints: string[];
+  dependencies: string[];
+  interfaces: { user: string[]; hardware: string[]; software: string[]; communication: string[]; file: string[] };
+  performance: string[];
+  entities: { entity: string; attributes: string }[];
+  relationships: string[];
+  designConstraints: string[];
+  quality: { attribute: string; requirement: string }[];
+  actors: { actor: string; useCases: string[] }[];
+  businessRules: string[];
+};
+
 export type Option = { label: string; recommended?: boolean };
 
 export type Question = {
@@ -61,6 +84,7 @@ export type Item =
   | { kind: "delegation"; id: string; messages: DelegationMessage[]; steps?: Step[]; at: number }
   | { kind: "srs"; id: string; srs: Srs; at: number }
   | { kind: "sdlc"; id: string; sdlc: Sdlc; at: number }
+  | { kind: "ieee"; id: string; ieee: Ieee; title: string; at: number }
   | { kind: "notice"; id: string; title: string; text: string; at: number };
 
 export type AgentEvent =

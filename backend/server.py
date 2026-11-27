@@ -1,4 +1,4 @@
-"""Pico: the API the chat UI talks to, and the fixed pipeline that runs the two agents.
+"""Pico: the API the chat UI talks to, and the fixed pipeline that runs the three agents.
 
 Run:  uvicorn server:app --port 8000
 """
@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 import rules
-from agents import OVERVIEW, PLAN, RATE, REQUIREMENTS, analyst, ask, planner
+from agents import IEEE_INTRO, IEEE_SPECIFIC, OVERVIEW, PLAN, RATE, REQUIREMENTS, analyst, ask, planner, writer
 
 app = FastAPI(title="Pico")
 LOGS = Path(__file__).parent / "runs"
@@ -86,8 +86,18 @@ async def plan_sdlc(brief: str, srs: dict, trace: list) -> dict:
     }
 
 
+async def write_ieee(brief: str, srs: dict, trace: list) -> dict:
+    """Agent (iii): the IEEE 830-1998 sections, written from the brief and the validated SRS."""
+    compact = json.dumps([{k: r[k] for k in ("id", "statement", "category", "acceptance")} for r in srs["requirements"]])
+    context = (f"Brief:\n{brief}\n\nSRS title: {srs['title']}\nSummary: {srs['summary']}\nStakeholders: {srs['stakeholders']}\n"
+               f"Assumptions: {srs['assumptions']}\nRequirements: {compact}")
+    intro, specific = await asyncio.gather(ask(writer, IEEE_INTRO, context, trace), ask(writer, IEEE_SPECIFIC, context, trace))
+    docs = sorted({r["source"].split("#")[0].rsplit("/", 1)[-1] for r in srs["requirements"] if "#" in r["source"]})
+    return intro | specific | {"references": ["IEEE Std 830-1998, Recommended Practice for Software Requirements Specifications", *docs]}
+
+
 async def run(s: Session, brief: str):
-    """Intake → SRS → SDLC → human review."""
+    """Intake → SRS → SDLC + IEEE SRS (in parallel) → human review."""
     brief = rules.mask(brief)
     await s.emit("stage", stage="intake")
     await s.push("event", icon="wake", text="Pico is waking up")
@@ -111,17 +121,21 @@ async def run(s: Session, brief: str):
 
     await s.emit("stage", stage="sdlc")
     await s.push("event", icon="handoff", text="Handed off to", strong="SDLC Planner")
-    await s.emit("working", agents=["planner"])
-    sdlc = await plan_sdlc(brief, srs, s.trace)
+    await s.emit("working", agents=["planner", "writer"])
+    sdlc, ieee = await asyncio.gather(plan_sdlc(brief, srs, s.trace), write_ieee(brief, srs, s.trace))
     chosen, ranking = sdlc["chosen"], sdlc["ranking"]
     await s.delegate(("pico", "planner", f"SRS attached ({len(srs['requirements'])} requirements). Recommend a lifecycle."),
                      ("planner", "pico", f"Rated {len(sdlc['factors'])} decision factors; scored {len(ranking)} models."),
                      ("planner", "pico", f"{chosen} leads at {ranking[0]['score']}/100; {ranking[1]['model']} next at {ranking[1]['score']}."))
     await s.push("event", icon="doc", text="Created document", strong="SDLC recommendation")
     await s.push("sdlc", sdlc=sdlc)
+    await s.delegate(("pico", "writer", "SRS attached. Write it up in the IEEE 830-1998 format."),
+                     ("writer", "pico", f"Sections 1–3 done: {len(ieee['functions'])} functions, {len(ieee['entities'])} entities, {len(ieee['quality'])} quality attributes."))
+    await s.push("event", icon="doc", text="Created document", strong="IEEE 830 SRS")
+    await s.push("ieee", ieee=ieee, title=srs["title"])
 
     await s.emit("stage", stage="review")
-    await s.say(f"Done. **{chosen}** fits best. Open a model in the ranking to see why it was or wasn't chosen.")
+    await s.say(f"Done. **{chosen}** fits best. Open a model in the ranking to see why it was or wasn't chosen. The IEEE 830 SRS is ready to download as a PDF.")
     await s.push("notice", title="Needs human review", text="Regulatory interpretation, the requirements baseline and the SDLC choice must be approved by a qualified person. Treat this as a draft.")
     await s.emit("stage", stage="done")
 
@@ -157,8 +171,26 @@ def session(sid: str) -> Session:
 async def start(body: Brief):
     s = Session(uuid.uuid4().hex)
     SESSIONS[s.id] = s
+    with open(LOGS / f"{s.id}.jsonl", "a") as log:  # first line: the brief, so the chat can be rebuilt later
+        log.write(json.dumps({"t": time.time(), "type": "brief", "brief": body.brief}) + "\n")
     s.task = asyncio.create_task(guarded(s, body.brief))  # keep a reference so the task isn't garbage-collected
     return {"id": s.id}
+
+
+def read_log(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+@app.get("/api/sessions")
+async def history():
+    """Every saved run in runs/, newest first, rebuilt from its log."""
+    runs = []
+    for path in sorted(LOGS.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
+        log = read_log(path)
+        if log and log[0]["type"] == "brief":  # older logs have no brief; skip them
+            runs.append({"id": path.stem, "brief": log[0]["brief"], "at": int(log[0]["t"] * 1000),
+                         "events": [{k: v for k, v in e.items() if k != "t"} for e in log[1:]]})
+    return runs
 
 
 @app.get("/api/sessions/{sid}/events")

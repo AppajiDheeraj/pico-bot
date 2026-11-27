@@ -1,7 +1,7 @@
-import { Check, ChevronsRight, Download, FileText, GitBranch } from "lucide-react";
+import { BookOpen, Check, ChevronsRight, Download, FileText, GitBranch } from "lucide-react";
 import { CREW } from "../data/crew";
-import { download, sdlcMarkdown, srsMarkdown } from "../lib/export";
-import type { AgentId, Sdlc, Srs, Stage } from "../lib/types";
+import { download, ieeeHtml, printPdf, sdlcMarkdown, srsMarkdown } from "../lib/export";
+import type { AgentId, Ieee, Sdlc, Srs, Stage } from "../lib/types";
 import { AgentAvatar } from "./Avatar";
 
 const STEPS: { id: Stage; label: string }[] = [
@@ -12,7 +12,7 @@ const STEPS: { id: Stage; label: string }[] = [
 ];
 const ORDER: Stage[] = ["idle", "intake", "srs", "sdlc", "review", "done"];
 
-export function RightPanel({ stage, working, srs, sdlc, onClose }: { stage: Stage; working: AgentId[]; srs?: Srs; sdlc?: Sdlc; onClose: () => void }) {
+export function RightPanel({ stage, working, srs, sdlc, ieee, onClose }: { stage: Stage; working: AgentId[]; srs?: Srs; sdlc?: Sdlc; ieee?: { ieee: Ieee; title: string }; onClose: () => void }) {
   const at = ORDER.indexOf(stage);
   const picoBusy = stage !== "idle" && stage !== "done";
   return (
@@ -35,7 +35,7 @@ export function RightPanel({ stage, working, srs, sdlc, onClose }: { stage: Stag
 
       <div className="panel-section">Crew</div>
       <div className="panel-group">
-        {(["analyst", "planner"] as const).map((id) => {
+        {(["analyst", "planner", "writer"] as const).map((id) => {
           const busy = working.includes(id);
           return (
             <div key={id} className="crew-row">
@@ -75,6 +75,16 @@ export function RightPanel({ stage, working, srs, sdlc, onClose }: { stage: Stag
             <span className="doc-row-main">
               <span>Software Requirements Spec</span>
               <span className="muted">{srs.requirements.length} requirements · Markdown</span>
+            </span>
+            <Download size={15} className="doc-row-dl" />
+          </button>
+        )}
+        {ieee && (
+          <button className="doc-row" onClick={() => printPdf(ieeeHtml(ieee.title, ieee.ieee, srs))}>
+            <BookOpen size={18} />
+            <span className="doc-row-main">
+              <span>IEEE 830 SRS</span>
+              <span className="muted">Sections 1–3, appendices, index · PDF</span>
             </span>
             <Download size={15} className="doc-row-dl" />
           </button>

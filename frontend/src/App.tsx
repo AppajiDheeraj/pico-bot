@@ -90,8 +90,27 @@ export default function App() {
 
   useEffect(() => () => agents.current.forEach((a) => a.cancel()), []);
 
+  // Past runs live in backend/runs/; replay each saved log into a chat.
+  useEffect(() => {
+    if (DEMO) return;
+    fetch("/api/sessions")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((runs: { id: string; brief: string; at: number; events: AgentEvent[] }[]) => {
+        const saved = runs.map((r) =>
+          r.events.reduce(apply, {
+            id: r.id, at: r.at, typing: null, stage: "intake", working: [],
+            title: r.brief.length > 48 ? r.brief.slice(0, 46) + "…" : r.brief,
+            items: [{ kind: "user", id: `${r.id}-u`, text: r.brief, at: r.at }],
+          } as Session),
+        );
+        setSessions((all) => [...all, ...saved.filter((s) => !all.some((a) => a.id === s.id))]);
+      })
+      .catch(() => {}); // backend down: the start screen still works, and starting a run reports the error
+  }, []);
+
   const srs = active?.items.findLast((i) => i.kind === "srs");
   const sdlc = active?.items.findLast((i) => i.kind === "sdlc");
+  const ieee = active?.items.findLast((i) => i.kind === "ieee");
   const steps = active?.items.flatMap((i) => (i.kind === "delegation" ? i.steps ?? [] : [])) ?? [];
   const rows: SessionRow[] = sessions.map((s) => ({ id: s.id, title: s.title, preview: preview(s), at: s.at, stage: s.stage }));
 
@@ -152,6 +171,7 @@ export default function App() {
           working={active?.working ?? []}
           srs={srs?.kind === "srs" ? srs.srs : undefined}
           sdlc={sdlc?.kind === "sdlc" ? sdlc.sdlc : undefined}
+          ieee={ieee?.kind === "ieee" ? ieee : undefined}
           onClose={() => setPanelOpen(false)}
         />
       )}
